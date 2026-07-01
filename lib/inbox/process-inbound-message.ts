@@ -21,6 +21,14 @@ export async function processInboundMessage(msg: InboundMessage) {
 
   if (conversation.status !== "con_ia" || !conversation.ai_enabled) return;
 
+  const supabaseCheck = createAdminClient();
+  const { data: settings } = await supabaseCheck
+    .from("assistant_settings")
+    .select("is_paused")
+    .eq("id", 1)
+    .single();
+  if (settings?.is_paused) return; // apagado de emergencia: guarda el mensaje, no responde
+
   const escalated = await checkEscalation(conversation.id, msg.content);
   if (escalated) return;
 

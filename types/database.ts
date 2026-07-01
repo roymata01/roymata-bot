@@ -74,6 +74,7 @@ export interface AssistantSettings {
   escalation_keywords: string[];
   business_hours: Record<string, unknown>;
   off_hours_message: string | null;
+  is_paused: boolean;
   updated_at: string;
 }
 
