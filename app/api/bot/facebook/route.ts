@@ -34,7 +34,8 @@ function parseIntent(raw: string) {
   if (match) {
     try { const p = JSON.parse(match[1]); intent = p.intent; lead_score = parseInt(p.lead_score); } catch {}
   }
-  return { reply: raw.replace(/\n?INTENT_DATA:.*$/s, "").trim(), intent, lead_score };
+  const reply = raw.includes("INTENT_DATA:") ? raw.substring(0, raw.indexOf("INTENT_DATA:")).trim() : raw.trim();
+  return { reply, intent, lead_score };
 }
 
 export async function POST(req: NextRequest) {
