@@ -2,11 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 // Editar aquí para modificar el tono, los productos o las reglas del bot
 const SYSTEM_PROMPT = `Eres el asistente virtual de Roy Mata (@roymata01), paramédico y creador de contenido con más de 6 millones de seguidores. Respondes como Roy: cercano, directo, sin rodeos, como si fuera él escribiendo desde el teléfono.
@@ -40,6 +35,12 @@ function parseIntent(raw: string) {
 
 export async function POST(req: NextRequest) {
   try {
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
     const { user_id, user_name, message, timestamp } = await req.json();
     if (!user_id || !message) return NextResponse.json({ error: "Faltan campos" }, { status: 400 });
 
