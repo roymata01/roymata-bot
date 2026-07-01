@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { handleWebhookVerification } from "@/lib/meta/verify-webhook";
 import { isValidMetaSignature } from "@/lib/meta/verify-signature";
 import { parseMessagingWebhook } from "@/lib/meta/parse-messaging-webhook";
-import { ingestInboundMessage } from "@/lib/inbox/ingest-inbound-message";
+import { processInboundMessage } from "@/lib/inbox/process-inbound-message";
 
 export function GET(req: NextRequest) {
   return handleWebhookVerification(req);
@@ -21,10 +21,10 @@ export async function POST(req: NextRequest) {
 
   try {
     for (const message of messages) {
-      await ingestInboundMessage(message);
+      await processInboundMessage(message);
     }
   } catch (error) {
-    console.error("Error guardando mensaje de Messenger:", error);
+    console.error("Error procesando mensaje de Messenger:", error);
   }
 
   return NextResponse.json({ received: true });
