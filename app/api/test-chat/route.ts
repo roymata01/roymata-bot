@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isBusinessRelevant } from "@/lib/ai/check-relevance";
+import { isBusinessRelevantForHistory } from "@/lib/ai/check-relevance";
 import { generateTestReply } from "@/lib/ai/generate-test-reply";
 
 export async function POST(req: NextRequest) {
@@ -38,11 +38,13 @@ async function handlePost(req: NextRequest) {
     return NextResponse.json({ type: "escalation", keyword: escalationMatch });
   }
 
-  const relevant = await isBusinessRelevant(message);
+  const fullHistory = [...(history ?? []), { role: "user" as const, content: message }];
+
+  const relevant = await isBusinessRelevantForHistory(fullHistory);
   if (!relevant) {
     return NextResponse.json({ type: "irrelevant" });
   }
 
-  const replyText = await generateTestReply([...(history ?? []), { role: "user", content: message }]);
+  const replyText = await generateTestReply(fullHistory);
   return NextResponse.json({ type: "reply", reply: replyText });
 }

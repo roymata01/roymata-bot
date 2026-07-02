@@ -37,7 +37,7 @@ export async function processInboundMessage(msg: InboundMessage) {
     .single();
   if (settings?.is_paused) return; // apagado de emergencia: guarda el mensaje, no genera ni envía respuesta
 
-  const relevant = await isBusinessRelevant(msg.content);
+  const relevant = await isBusinessRelevant(conversation.id, msg.content);
   if (!relevant) return; // mensaje personal/social: la IA no se mete, Roy contesta si quiere
 
   const { messageId, replyText } = await generateAiReply(conversation.id, msg.channel, contact.id);
