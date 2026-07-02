@@ -19,9 +19,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </header>
       <div className="flex flex-1 overflow-hidden">
         <nav className="flex w-48 shrink-0 flex-col gap-1 border-r-2 border-black bg-[#FAF8F2] p-3">
+          <NavLink href="/resumen">Resumen</NavLink>
           <NavLink href="/inbox">Conversaciones</NavLink>
-          <NavLink href="/personalizacion">Personalización</NavLink>
+          <NavLink href="/crm">CRM</NavLink>
           <NavLink href="/templates">Templates</NavLink>
+          <NavLink href="/workflows">Workflows</NavLink>
+          <NavLink href="/personalizacion">Personalización</NavLink>
+          <NavLink href="/costos">Costos</NavLink>
         </nav>
         <div className="flex-1 overflow-hidden">{children}</div>
       </div>
