@@ -2,15 +2,44 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { SettingsCard } from "@/components/SettingsCard";
+import { EditModal } from "@/components/EditModal";
 import type { AssistantSettings, KnowledgeBaseSection } from "@/types/database";
+
+const SECTION_ICONS: Record<string, string> = {
+  identidad: "🪪",
+  tono: "💬",
+  servicios: "📚",
+  productos: "🎒",
+  reglas: "🛑",
+};
+
+type EditTarget =
+  | { type: "bot_status" }
+  | { type: "relevance" }
+  | { type: "model" }
+  | { type: "keywords" }
+  | { type: "off_hours" }
+  | { type: "section"; id: string }
+  | { type: "new_section" }
+  | null;
 
 export default function PersonalizacionPage() {
   const supabase = useMemo(() => createBrowserSupabaseClient(), []);
   const [sections, setSections] = useState<KnowledgeBaseSection[]>([]);
   const [settings, setSettings] = useState<AssistantSettings | null>(null);
-  const [keywordsDraft, setKeywordsDraft] = useState("");
   const [loading, setLoading] = useState(true);
-  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [target, setTarget] = useState<EditTarget>(null);
+  const [saving, setSaving] = useState(false);
+
+  // drafts por tipo de modal
+  const [draftRelevancePrompt, setDraftRelevancePrompt] = useState("");
+  const [draftModel, setDraftModel] = useState("");
+  const [draftMaxTokens, setDraftMaxTokens] = useState(500);
+  const [draftKeywords, setDraftKeywords] = useState("");
+  const [draftOffHours, setDraftOffHours] = useState("");
+  const [draftSectionTitle, setDraftSectionTitle] = useState("");
+  const [draftSectionContent, setDraftSectionContent] = useState("");
 
   const load = useCallback(async () => {
     const [{ data: sectionsData }, { data: settingsData }] = await Promise.all([
@@ -18,10 +47,7 @@ export default function PersonalizacionPage() {
       supabase.from("assistant_settings").select("*").eq("id", 1).single(),
     ]);
     setSections((sectionsData as KnowledgeBaseSection[]) ?? []);
-    if (settingsData) {
-      setSettings(settingsData as AssistantSettings);
-      setKeywordsDraft(((settingsData as AssistantSettings).escalation_keywords ?? []).join(", "));
-    }
+    if (settingsData) setSettings(settingsData as AssistantSettings);
     setLoading(false);
   }, [supabase]);
 
@@ -30,235 +56,283 @@ export default function PersonalizacionPage() {
     load();
   }, [load]);
 
-  function flashSaved() {
-    setSavedAt(Date.now());
-    setTimeout(() => setSavedAt(null), 2000);
+  function openEdit(t: EditTarget) {
+    if (!settings) return;
+    if (t?.type === "relevance") setDraftRelevancePrompt(settings.relevance_filter_prompt);
+    if (t?.type === "model") {
+      setDraftModel(settings.model);
+      setDraftMaxTokens(settings.max_tokens);
+    }
+    if (t?.type === "keywords") setDraftKeywords(settings.escalation_keywords.join(", "));
+    if (t?.type === "off_hours") setDraftOffHours(settings.off_hours_message ?? "");
+    if (t?.type === "section") {
+      const section = sections.find((s) => s.id === t.id);
+      setDraftSectionTitle(section?.title ?? "");
+      setDraftSectionContent(section?.content ?? "");
+    }
+    if (t?.type === "new_section") {
+      setDraftSectionTitle("Nueva sección");
+      setDraftSectionContent("");
+    }
+    setTarget(t);
   }
 
-  async function updateSection(id: string, patch: Partial<KnowledgeBaseSection>) {
-    setSections((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+  async function toggleBotPaused() {
+    if (!settings) return;
+    const next = !settings.is_paused;
+    await supabase.from("assistant_settings").update({ is_paused: next }).eq("id", 1);
+    setSettings({ ...settings, is_paused: next });
   }
 
-  async function saveSection(section: KnowledgeBaseSection) {
-    await supabase
-      .from("knowledge_base_sections")
-      .update({
-        title: section.title,
-        content: section.content,
-        order_index: section.order_index,
-        is_active: section.is_active,
-      })
-      .eq("id", section.id);
-    flashSaved();
+  async function toggleRelevanceFilter() {
+    if (!settings) return;
+    const next = !settings.relevance_filter_enabled;
+    await supabase.from("assistant_settings").update({ relevance_filter_enabled: next }).eq("id", 1);
+    setSettings({ ...settings, relevance_filter_enabled: next });
   }
 
-  async function deleteSection(id: string) {
+  async function toggleSectionActive(section: KnowledgeBaseSection) {
+    const next = !section.is_active;
+    await supabase.from("knowledge_base_sections").update({ is_active: next }).eq("id", section.id);
+    setSections((prev) => prev.map((s) => (s.id === section.id ? { ...s, is_active: next } : s)));
+  }
+
+  async function handleSave() {
+    if (!target || !settings) return;
+    setSaving(true);
+    try {
+      if (target.type === "relevance") {
+        await supabase.from("assistant_settings").update({ relevance_filter_prompt: draftRelevancePrompt }).eq("id", 1);
+        setSettings({ ...settings, relevance_filter_prompt: draftRelevancePrompt });
+      } else if (target.type === "model") {
+        await supabase.from("assistant_settings").update({ model: draftModel, max_tokens: draftMaxTokens }).eq("id", 1);
+        setSettings({ ...settings, model: draftModel, max_tokens: draftMaxTokens });
+      } else if (target.type === "keywords") {
+        const keywords = draftKeywords.split(",").map((k) => k.trim()).filter(Boolean);
+        await supabase.from("assistant_settings").update({ escalation_keywords: keywords }).eq("id", 1);
+        setSettings({ ...settings, escalation_keywords: keywords });
+      } else if (target.type === "off_hours") {
+        await supabase.from("assistant_settings").update({ off_hours_message: draftOffHours || null }).eq("id", 1);
+        setSettings({ ...settings, off_hours_message: draftOffHours || null });
+      } else if (target.type === "section") {
+        await supabase
+          .from("knowledge_base_sections")
+          .update({ title: draftSectionTitle, content: draftSectionContent })
+          .eq("id", target.id);
+        setSections((prev) =>
+          prev.map((s) => (s.id === target.id ? { ...s, title: draftSectionTitle, content: draftSectionContent } : s))
+        );
+      } else if (target.type === "new_section") {
+        const { data } = await supabase
+          .from("knowledge_base_sections")
+          .insert({
+            section_key: `seccion_${Date.now()}`,
+            title: draftSectionTitle,
+            content: draftSectionContent,
+            order_index: sections.length + 1,
+          })
+          .select()
+          .single();
+        if (data) setSections((prev) => [...prev, data as KnowledgeBaseSection]);
+      }
+      setTarget(null);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDeleteSection(id: string) {
     if (!confirm("¿Borrar esta sección de la base de conocimiento?")) return;
     await supabase.from("knowledge_base_sections").delete().eq("id", id);
     setSections((prev) => prev.filter((s) => s.id !== id));
+    setTarget(null);
   }
 
-  async function addSection() {
-    const { data } = await supabase
-      .from("knowledge_base_sections")
-      .insert({
-        section_key: `seccion_${Date.now()}`,
-        title: "Nueva sección",
-        content: "",
-        order_index: sections.length + 1,
-      })
-      .select()
-      .single();
-    if (data) setSections((prev) => [...prev, data as KnowledgeBaseSection]);
-  }
-
-  async function saveSettings() {
-    if (!settings) return;
-    const keywords = keywordsDraft
-      .split(",")
-      .map((k) => k.trim())
-      .filter(Boolean);
-    await supabase
-      .from("assistant_settings")
-      .update({
-        model: settings.model,
-        max_tokens: settings.max_tokens,
-        off_hours_message: settings.off_hours_message,
-        is_paused: settings.is_paused,
-        escalation_keywords: keywords,
-        relevance_filter_enabled: settings.relevance_filter_enabled,
-        relevance_filter_prompt: settings.relevance_filter_prompt,
-      })
-      .eq("id", 1);
-    flashSaved();
-  }
-
-  if (loading) return <div className="p-6 text-sm text-slate-500">Cargando...</div>;
+  if (loading || !settings) return <div className="p-6 text-sm text-slate-500">Cargando...</div>;
 
   return (
     <div className="h-full overflow-y-auto p-6">
-      <div className="mx-auto flex max-w-3xl flex-col gap-6">
-        <div>
-          <h2 className="text-xl font-bold">Personalización</h2>
-          <p className="text-sm text-slate-400">
-            Aquí editas lo que Claude sabe y cómo se comporta. Se usa en cada respuesta automática.
-          </p>
-          {savedAt && <p className="mt-1 text-sm font-medium text-emerald-400">Guardado ✓</p>}
+      <div className="mx-auto flex max-w-5xl flex-col gap-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold uppercase tracking-wide text-slate-400">
+              El cerebro del bot
+            </span>
+            <h2 className="text-xl font-bold">Personalización</h2>
+          </div>
+          <span
+            className={`rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide ${
+              settings.is_paused ? "border-red-500/50 bg-red-500/15 text-red-300" : "border-emerald-500/50 bg-emerald-500/15 text-emerald-300"
+            }`}
+          >
+            {settings.is_paused ? "Agente pausado" : "Agente activo"}
+          </span>
         </div>
+        <p className="-mt-4 text-sm text-slate-400">Personaliza el comportamiento y el conocimiento de tu agente para atender a tus clientes.</p>
 
-        {settings && (
-          <section className="rounded-2xl border border-white/10 bg-[#141C2F] p-5">
-            <h3 className="mb-3 font-bold">Configuración del asistente</h3>
-
-            <div className="mb-3 flex items-center justify-between rounded-lg border border-white/10 bg-orange-500/10 px-3 py-2">
-              <div>
-                <p className="font-semibold">Bot pausado (apagado de emergencia)</p>
-                <p className="text-xs text-slate-400">Si está activo, se guardan los mensajes pero la IA no responde.</p>
-              </div>
-              <button
-                onClick={() => setSettings({ ...settings, is_paused: !settings.is_paused })}
-                className={`rounded-lg border border-white/10 px-3 py-1.5 text-sm font-semibold ${
-                  settings.is_paused ? "bg-red-500 text-white" : "bg-emerald-500 text-white"
-                }`}
-              >
-                {settings.is_paused ? "Pausado" : "Activo"}
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <label className="flex flex-col gap-1 text-sm">
-                Modelo
-                <select
-                  value={settings.model}
-                  onChange={(e) => setSettings({ ...settings, model: e.target.value })}
-                  className="rounded-lg border border-white/10 px-2 py-1.5"
-                >
-                  <option value="claude-haiku-4-5">Claude Haiku 4.5 (rápido, económico)</option>
-                  <option value="claude-sonnet-4-6">Claude Sonnet 4.6 (más inteligente)</option>
-                </select>
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                Máximo de tokens por respuesta
-                <input
-                  type="number"
-                  value={settings.max_tokens}
-                  onChange={(e) => setSettings({ ...settings, max_tokens: Number(e.target.value) })}
-                  className="rounded-lg border border-white/10 px-2 py-1.5"
-                />
-              </label>
-            </div>
-
-            <label className="mt-3 flex flex-col gap-1 text-sm">
-              Palabras clave de emergencia (separadas por coma) — apagan la IA y escalan la conversación
-              <textarea
-                value={keywordsDraft}
-                onChange={(e) => setKeywordsDraft(e.target.value)}
-                rows={2}
-                className="rounded-lg border border-white/10 px-2 py-1.5"
-              />
-            </label>
-
-            <div className="mt-3 flex items-center justify-between rounded-lg border border-white/10 bg-blue-500/10 px-3 py-2">
-              <div>
-                <p className="font-semibold">Solo contestar mensajes de negocio</p>
-                <p className="text-xs text-slate-400">
-                  Antes de responder, Claude analiza si el mensaje es sobre tus servicios o es personal — si es
-                  personal, no contesta (tú decides si le respondes).
-                </p>
-              </div>
-              <button
-                onClick={() => setSettings({ ...settings, relevance_filter_enabled: !settings.relevance_filter_enabled })}
-                className={`shrink-0 rounded-lg border border-white/10 px-3 py-1.5 text-sm font-semibold ${
-                  settings.relevance_filter_enabled ? "bg-emerald-500 text-white" : "bg-white/10"
-                }`}
-              >
-                {settings.relevance_filter_enabled ? "Activo" : "Apagado"}
-              </button>
-            </div>
-
-            <label className="mt-3 flex flex-col gap-1 text-sm">
-              Instrucciones del filtro de relevancia
-              <textarea
-                value={settings.relevance_filter_prompt}
-                onChange={(e) => setSettings({ ...settings, relevance_filter_prompt: e.target.value })}
-                rows={4}
-                className="rounded-lg border border-white/10 px-2 py-1.5 font-mono text-xs"
-              />
-            </label>
-
-            <label className="mt-3 flex flex-col gap-1 text-sm">
-              Mensaje fuera de horario (opcional)
-              <textarea
-                value={settings.off_hours_message ?? ""}
-                onChange={(e) => setSettings({ ...settings, off_hours_message: e.target.value })}
-                rows={2}
-                className="rounded-lg border border-white/10 px-2 py-1.5"
-              />
-            </label>
-
-            <button
-              onClick={saveSettings}
-              className="mt-4 rounded-lg border border-orange-500/60 bg-orange-500/100 hover:bg-orange-600 px-4 py-2 text-sm font-semibold text-white"
-            >
-              Guardar configuración
-            </button>
-          </section>
-        )}
-
-        <section>
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="font-bold">Base de conocimiento</h3>
-            <button
-              onClick={addSection}
-              className="rounded-lg border border-white/10 bg-[#141C2F] px-3 py-1.5 text-sm font-semibold hover:bg-white/5"
-            >
-              + Agregar sección
-            </button>
-          </div>
-
-          <div className="flex flex-col gap-4">
-            {sections.map((section) => (
-              <div key={section.id} className="rounded-2xl border border-white/10 bg-[#141C2F] p-4">
-                <div className="mb-2 flex items-center gap-2">
-                  <input
-                    value={section.title}
-                    onChange={(e) => updateSection(section.id, { title: e.target.value })}
-                    className="flex-1 rounded-lg border border-white/10 px-2 py-1.5 text-sm font-semibold"
-                  />
-                  <label className="flex items-center gap-1 text-xs">
-                    <input
-                      type="checkbox"
-                      checked={section.is_active}
-                      onChange={(e) => updateSection(section.id, { is_active: e.target.checked })}
-                    />
-                    Activa
-                  </label>
-                </div>
-                <textarea
-                  value={section.content}
-                  onChange={(e) => updateSection(section.id, { content: e.target.value })}
-                  rows={5}
-                  className="w-full rounded-lg border border-white/10 px-2 py-1.5 text-sm"
-                />
-                <div className="mt-2 flex justify-end gap-2">
-                  <button
-                    onClick={() => deleteSection(section.id)}
-                    className="rounded-lg border border-white/10 px-3 py-1.5 text-sm font-semibold text-red-400 hover:bg-red-500/10"
-                  >
-                    Borrar
-                  </button>
-                  <button
-                    onClick={() => saveSection(section)}
-                    className="rounded-lg border border-orange-500/60 bg-orange-500/100 hover:bg-orange-600 px-3 py-1.5 text-sm font-semibold text-white"
-                  >
-                    Guardar sección
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <SettingsCard
+            icon="⏻"
+            title="Estado del bot"
+            preview={settings.is_paused ? "Pausado: se guardan mensajes pero no responde." : "Activo: responde en vivo a mensajes reales."}
+            active={!settings.is_paused}
+            onToggleActive={toggleBotPaused}
+            onEdit={() => openEdit({ type: "bot_status" })}
+          />
+          <SettingsCard
+            icon="🎯"
+            title="Solo negocio"
+            preview={settings.relevance_filter_prompt}
+            active={settings.relevance_filter_enabled}
+            onToggleActive={toggleRelevanceFilter}
+            onEdit={() => openEdit({ type: "relevance" })}
+          />
+          <SettingsCard
+            icon="⚙️"
+            title="Modelo y respuesta"
+            preview={`${settings.model} · hasta ${settings.max_tokens} tokens por respuesta`}
+            onEdit={() => openEdit({ type: "model" })}
+          />
+          <SettingsCard
+            icon="🚨"
+            title="Palabras de emergencia"
+            preview={settings.escalation_keywords.join(", ")}
+            onEdit={() => openEdit({ type: "keywords" })}
+          />
+          <SettingsCard
+            icon="🕒"
+            title="Mensaje fuera de horario"
+            preview={settings.off_hours_message || "No configurado"}
+            onEdit={() => openEdit({ type: "off_hours" })}
+          />
+          {sections.map((section) => (
+            <SettingsCard
+              key={section.id}
+              icon={SECTION_ICONS[section.section_key] ?? "📄"}
+              title={section.title}
+              preview={section.content}
+              active={section.is_active}
+              onToggleActive={() => toggleSectionActive(section)}
+              onEdit={() => openEdit({ type: "section", id: section.id })}
+            />
+          ))}
+          <button
+            onClick={() => openEdit({ type: "new_section" })}
+            className="flex min-h-[140px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/20 text-slate-400 hover:border-orange-500/50 hover:text-orange-300"
+          >
+            <span className="text-2xl">+</span>
+            <span className="text-sm font-semibold">Agregar sección</span>
+          </button>
+        </div>
       </div>
+
+      {target?.type === "bot_status" && (
+        <EditModal title="Estado del bot" onClose={() => setTarget(null)} onSave={() => setTarget(null)}>
+          <p className="text-sm text-slate-400">
+            Usa el switch de la tarjeta para pausar o activar el bot. Cuando está pausado, los mensajes se siguen
+            guardando pero la IA no genera ni envía respuesta.
+          </p>
+        </EditModal>
+      )}
+
+      {target?.type === "relevance" && (
+        <EditModal title="Solo negocio — instrucciones del filtro" onClose={() => setTarget(null)} onSave={handleSave} saving={saving}>
+          <label className="flex flex-col gap-1 text-sm">
+            Instrucciones que usa Claude para decidir si un mensaje es de negocio o personal
+            <textarea
+              value={draftRelevancePrompt}
+              onChange={(e) => setDraftRelevancePrompt(e.target.value)}
+              rows={8}
+              className="rounded-lg border border-white/10 bg-[#0B1220] px-2 py-1.5 font-mono text-xs"
+            />
+          </label>
+        </EditModal>
+      )}
+
+      {target?.type === "model" && (
+        <EditModal title="Modelo y respuesta" onClose={() => setTarget(null)} onSave={handleSave} saving={saving}>
+          <label className="flex flex-col gap-1 text-sm">
+            Modelo
+            <select
+              value={draftModel}
+              onChange={(e) => setDraftModel(e.target.value)}
+              className="rounded-lg border border-white/10 bg-[#0B1220] px-2 py-1.5"
+            >
+              <option value="claude-haiku-4-5">Claude Haiku 4.5 (rápido, económico)</option>
+              <option value="claude-sonnet-4-6">Claude Sonnet 4.6 (más inteligente)</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            Máximo de tokens por respuesta
+            <input
+              type="number"
+              value={draftMaxTokens}
+              onChange={(e) => setDraftMaxTokens(Number(e.target.value))}
+              className="rounded-lg border border-white/10 bg-[#0B1220] px-2 py-1.5"
+            />
+          </label>
+        </EditModal>
+      )}
+
+      {target?.type === "keywords" && (
+        <EditModal title="Palabras de emergencia" onClose={() => setTarget(null)} onSave={handleSave} saving={saving}>
+          <label className="flex flex-col gap-1 text-sm">
+            Separadas por coma — apagan la IA y escalan la conversación a &quot;Por atender&quot;
+            <textarea
+              value={draftKeywords}
+              onChange={(e) => setDraftKeywords(e.target.value)}
+              rows={4}
+              className="rounded-lg border border-white/10 bg-[#0B1220] px-2 py-1.5 text-sm"
+            />
+          </label>
+        </EditModal>
+      )}
+
+      {target?.type === "off_hours" && (
+        <EditModal title="Mensaje fuera de horario" onClose={() => setTarget(null)} onSave={handleSave} saving={saving}>
+          <textarea
+            value={draftOffHours}
+            onChange={(e) => setDraftOffHours(e.target.value)}
+            rows={4}
+            className="rounded-lg border border-white/10 bg-[#0B1220] px-2 py-1.5 text-sm"
+          />
+        </EditModal>
+      )}
+
+      {(target?.type === "section" || target?.type === "new_section") && (
+        <EditModal
+          title={target.type === "new_section" ? "Nueva sección" : "Editar sección"}
+          onClose={() => setTarget(null)}
+          onSave={handleSave}
+          saving={saving}
+        >
+          <label className="flex flex-col gap-1 text-sm">
+            Título
+            <input
+              value={draftSectionTitle}
+              onChange={(e) => setDraftSectionTitle(e.target.value)}
+              className="rounded-lg border border-white/10 bg-[#0B1220] px-2 py-1.5"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            Contenido
+            <textarea
+              value={draftSectionContent}
+              onChange={(e) => setDraftSectionContent(e.target.value)}
+              rows={10}
+              className="rounded-lg border border-white/10 bg-[#0B1220] px-2 py-1.5 text-sm"
+            />
+          </label>
+          {target.type === "section" && (
+            <button
+              onClick={() => handleDeleteSection(target.id)}
+              className="self-start rounded-lg border border-white/10 px-3 py-1.5 text-sm font-semibold text-red-400 hover:bg-red-500/10"
+            >
+              Borrar sección
+            </button>
+          )}
+        </EditModal>
+      )}
     </div>
   );
 }
