@@ -20,7 +20,7 @@ async function handlePost(req: NextRequest) {
   } = await authClient.auth.getUser();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
-  const { history, message } = await req.json();
+  const { history, message, customerName } = await req.json();
   if (!message || typeof message !== "string" || !message.trim()) {
     return NextResponse.json({ error: "Falta el mensaje" }, { status: 400 });
   }
@@ -48,6 +48,6 @@ async function handlePost(req: NextRequest) {
     return NextResponse.json({ type: "irrelevant" });
   }
 
-  const replyText = await generateTestReply(fullHistory);
+  const replyText = await generateTestReply(fullHistory, customerName || null);
   return NextResponse.json({ type: "reply", reply: replyText });
 }

@@ -9,7 +9,7 @@ const HISTORY_LIMIT = 20;
 export async function generateAiReply(conversationId: string, channel: Channel, contactId: string) {
   const supabase = createAdminClient();
 
-  const [{ data: settings, error: settingsError }, { data: history, error: historyError }] = await Promise.all([
+  const [{ data: settings, error: settingsError }, { data: history, error: historyError }, { data: contact }] = await Promise.all([
     supabase.from("assistant_settings").select("model, max_tokens").eq("id", 1).single(),
     supabase
       .from("messages")
@@ -17,11 +17,17 @@ export async function generateAiReply(conversationId: string, channel: Channel, 
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: false })
       .limit(HISTORY_LIMIT),
+    supabase.from("contacts").select("display_name, phone").eq("id", contactId).single(),
   ]);
   if (settingsError) throw settingsError;
   if (historyError) throw historyError;
 
-  const systemPrompt = await buildSystemPrompt();
+  const knowledgeBasePrompt = await buildSystemPrompt();
+  const contactName = contact?.display_name || contact?.phone || null;
+  const systemPrompt = `${knowledgeBasePrompt}
+
+## Con quién estás hablando
+${contactName ? `Su nombre/usuario es: ${contactName}.` : "No sabes su nombre todavía."} Si el nombre indica claramente el género (ej. un nombre de mujer), NO uses "bro" ni "hermano" — usa el nombre directamente o un término neutral. Si el nombre no deja claro el género (ej. es un @usuario que no lo revela), usa lenguaje neutral sin género en vez de asumir.`;
 
   const messages = (history ?? [])
     .slice()

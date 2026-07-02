@@ -12,6 +12,7 @@ export default function ProbarBotPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [display, setDisplay] = useState<DisplayItem[]>([]);
   const [draft, setDraft] = useState("");
+  const [customerName, setCustomerName] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,7 +30,7 @@ export default function ProbarBotPage() {
       const res = await fetch("/api/test-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ history, message }),
+        body: JSON.stringify({ history, message, customerName: customerName.trim() || null }),
       });
       const body = await res.json();
 
@@ -76,12 +77,20 @@ export default function ProbarBotPage() {
             no se guarda en tu bandeja ni se manda a ningún canal.
           </p>
         </div>
-        <button
-          onClick={reset}
-          className="shrink-0 rounded-lg border border-white/10 px-3 py-1.5 text-sm font-semibold hover:bg-white/5"
-        >
-          Reiniciar conversación
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <input
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+            placeholder="Nombre del cliente (opcional)"
+            className="w-48 rounded-lg border border-white/10 bg-[#141C2F] px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-orange-400"
+          />
+          <button
+            onClick={reset}
+            className="rounded-lg border border-white/10 px-3 py-1.5 text-sm font-semibold hover:bg-white/5"
+          >
+            Reiniciar conversación
+          </button>
+        </div>
       </div>
 
       <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-2 overflow-y-auto p-6">
