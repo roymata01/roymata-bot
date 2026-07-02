@@ -3,19 +3,21 @@
 import { useEffect, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { ChannelBadge } from "@/components/ChannelBadge";
-import type { Contact, Conversation } from "@/types/database";
+import { LEAD_STATUS_CONFIG, LEAD_STATUS_ORDER } from "@/lib/inbox/lead-status";
+import type { Contact, Conversation, LeadStatus } from "@/types/database";
 
 export function ContactDetail({
   contact,
   onSaved,
 }: {
   contact: Contact;
-  onSaved: (tags: string[], notes: string | null) => void;
+  onSaved: (tags: string[], notes: string | null, leadStatus: LeadStatus | null) => void;
 }) {
   const [supabase] = useState(() => createBrowserSupabaseClient());
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [tagsDraft, setTagsDraft] = useState(contact.tags.join(", "));
   const [notesDraft, setNotesDraft] = useState(contact.notes ?? "");
+  const [leadStatusDraft, setLeadStatusDraft] = useState<LeadStatus | null>(contact.lead_status);
   const [savedAt, setSavedAt] = useState<number | null>(null);
 
   useEffect(() => {
@@ -31,8 +33,11 @@ export function ContactDetail({
       .split(",")
       .map((t) => t.trim())
       .filter(Boolean);
-    await supabase.from("contacts").update({ tags, notes: notesDraft || null }).eq("id", contact.id);
-    onSaved(tags, notesDraft || null);
+    await supabase
+      .from("contacts")
+      .update({ tags, notes: notesDraft || null, lead_status: leadStatusDraft })
+      .eq("id", contact.id);
+    onSaved(tags, notesDraft || null, leadStatusDraft);
     setSavedAt(Date.now());
     setTimeout(() => setSavedAt(null), 2000);
   }
@@ -63,6 +68,35 @@ export function ContactDetail({
           <p className="font-medium">{new Date(contact.last_contact_at).toLocaleString("es-MX")}</p>
         </div>
       </div>
+
+      <section className="rounded-2xl border border-white/10 bg-[#141C2F] p-4">
+        <p className="mb-2 text-sm">Estado del lead</p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setLeadStatusDraft(null)}
+            className={`rounded-full border px-3 py-1 text-xs font-medium ${
+              leadStatusDraft === null ? "border-white/40 bg-white/10 text-white" : "border-white/10 text-slate-400"
+            }`}
+          >
+            Sin clasificar
+          </button>
+          {LEAD_STATUS_ORDER.map((status) => {
+            const config = LEAD_STATUS_CONFIG[status];
+            const active = leadStatusDraft === status;
+            return (
+              <button
+                key={status}
+                onClick={() => setLeadStatusDraft(status)}
+                className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                  active ? config.className : "border-white/10 text-slate-400"
+                }`}
+              >
+                {config.label}
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       <section className="rounded-2xl border border-white/10 bg-[#141C2F] p-4">
         <label className="flex flex-col gap-1 text-sm">

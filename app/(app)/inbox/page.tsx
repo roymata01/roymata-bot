@@ -9,6 +9,7 @@ import { ChatPanel } from "@/components/ChatPanel";
 import type { Channel, Contact, Conversation, ConversationStatus, Message } from "@/types/database";
 
 type ConversationWithContact = Conversation & { contact: Contact };
+type AiFilter = "all" | "answered" | "personal";
 
 export default function InboxPage() {
   const supabase = useMemo(() => createBrowserSupabaseClient(), []);
@@ -19,6 +20,8 @@ export default function InboxPage() {
   const [search, setSearch] = useState("");
   const [channelFilter, setChannelFilter] = useState<Channel | "all">("all");
   const [statusFilter, setStatusFilter] = useState<ConversationStatus | "all">("all");
+  const [aiFilter, setAiFilter] = useState<AiFilter>("all");
+  const [answeredConversationIds, setAnsweredConversationIds] = useState<Set<string>>(new Set());
 
   const loadConversations = useCallback(async () => {
     const { data } = await supabase
@@ -26,6 +29,11 @@ export default function InboxPage() {
       .select("*, contact:contacts(*)")
       .order("last_message_at", { ascending: false });
     setConversations((data as ConversationWithContact[]) ?? []);
+  }, [supabase]);
+
+  const loadAnsweredConversationIds = useCallback(async () => {
+    const { data } = await supabase.from("messages").select("conversation_id").eq("sender_type", "ai");
+    setAnsweredConversationIds(new Set((data ?? []).map((m) => m.conversation_id as string)));
   }, [supabase]);
 
   const loadMessages = useCallback(
@@ -43,6 +51,8 @@ export default function InboxPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial de la bandeja
     loadConversations();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial de la bandeja
+    loadAnsweredConversationIds();
 
     const channel = supabase
       .channel("inbox-realtime")
@@ -53,6 +63,7 @@ export default function InboxPage() {
         const row = (payload.new ?? payload.old) as Message | undefined;
         if (row && row.conversation_id === selectedId) loadMessages(selectedId);
         loadConversations();
+        loadAnsweredConversationIds();
       })
       .subscribe();
 
@@ -77,6 +88,9 @@ export default function InboxPage() {
   const filtered = conversations.filter((c) => {
     if (channelFilter !== "all" && c.channel !== channelFilter) return false;
     if (statusFilter !== "all" && c.status !== statusFilter) return false;
+    const wasAnswered = answeredConversationIds.has(c.id);
+    if (aiFilter === "answered" && !wasAnswered) return false;
+    if (aiFilter === "personal" && wasAnswered) return false;
     if (search.trim()) {
       const needle = search.trim().toLowerCase();
       const haystack = `${c.contact.display_name ?? ""} ${c.contact.phone ?? ""} ${c.contact.external_id}`.toLowerCase();
@@ -90,6 +104,8 @@ export default function InboxPage() {
     return acc;
   }, {});
   const porAtenderCount = statusCounts["por_atender"] ?? 0;
+  const answeredCount = conversations.filter((c) => answeredConversationIds.has(c.id)).length;
+  const personalCount = conversations.length - answeredCount;
 
   async function handleSendMessage(content: string) {
     if (!selectedId) return;
@@ -132,7 +148,7 @@ export default function InboxPage() {
             <button
               onClick={() => setChannelFilter("all")}
               className={`rounded-full border border-white/10 px-2 py-0.5 text-xs font-medium ${
-                channelFilter === "all" ? "bg-black text-white" : "bg-[#141C2F]"
+                channelFilter === "all" ? "bg-orange-500 text-white" : "bg-[#141C2F]"
               }`}
             >
               Todos
@@ -151,11 +167,11 @@ export default function InboxPage() {
             ))}
           </div>
 
-          <div className="flex flex-wrap gap-1">
+          <div className="mb-2 flex flex-wrap gap-1">
             <button
               onClick={() => setStatusFilter("all")}
               className={`rounded-full border border-white/10 px-2 py-0.5 text-xs font-medium ${
-                statusFilter === "all" ? "bg-black text-white" : "bg-[#141C2F]"
+                statusFilter === "all" ? "bg-orange-500 text-white" : "bg-[#141C2F]"
               }`}
             >
               Todas
@@ -165,12 +181,39 @@ export default function InboxPage() {
                 key={status}
                 onClick={() => setStatusFilter(status)}
                 className={`rounded-full border border-white/10 px-2 py-0.5 text-xs font-medium ${
-                  statusFilter === status ? "bg-black text-white" : "bg-[#141C2F]"
+                  statusFilter === status ? "bg-orange-500 text-white" : "bg-[#141C2F]"
                 }`}
               >
                 {STATUS_CONFIG[status].label} ({statusCounts[status] ?? 0})
               </button>
             ))}
+          </div>
+
+          <div className="flex flex-wrap gap-1">
+            <button
+              onClick={() => setAiFilter("all")}
+              className={`rounded-full border border-white/10 px-2 py-0.5 text-xs font-medium ${
+                aiFilter === "all" ? "bg-orange-500 text-white" : "bg-[#141C2F]"
+              }`}
+            >
+              Todas
+            </button>
+            <button
+              onClick={() => setAiFilter("answered")}
+              className={`rounded-full border border-white/10 px-2 py-0.5 text-xs font-medium ${
+                aiFilter === "answered" ? "bg-emerald-500 text-white" : "bg-[#141C2F]"
+              }`}
+            >
+              Negocio — bot contestó ({answeredCount})
+            </button>
+            <button
+              onClick={() => setAiFilter("personal")}
+              className={`rounded-full border border-white/10 px-2 py-0.5 text-xs font-medium ${
+                aiFilter === "personal" ? "bg-blue-500 text-white" : "bg-[#141C2F]"
+              }`}
+            >
+              Personal — sin respuesta ({personalCount})
+            </button>
           </div>
         </div>
 

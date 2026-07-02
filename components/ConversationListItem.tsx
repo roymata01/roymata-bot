@@ -1,5 +1,6 @@
 import { ChannelBadge } from "@/components/ChannelBadge";
 import { StatusBadge } from "@/components/StatusBadge";
+import { LeadStatusBadge } from "@/components/LeadStatusBadge";
 import type { Contact, Conversation } from "@/types/database";
 
 function formatTime(iso: string | null) {
@@ -55,6 +56,7 @@ export function ConversationListItem({
         <div className="mt-2 flex items-center gap-2">
           <ChannelBadge channel={conversation.channel} />
           <StatusBadge status={conversation.status} />
+          <LeadStatusBadge status={contact.lead_status} />
           {conversation.unread_count > 0 && (
             <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs font-bold text-white">
               {conversation.unread_count}

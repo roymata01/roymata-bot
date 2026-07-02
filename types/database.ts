@@ -10,6 +10,8 @@ export type ConversationStatus =
 export type MessageDirection = "in" | "out";
 export type MessageSenderType = "contact" | "ai" | "human";
 
+export type LeadStatus = "interesado" | "registrado" | "sin_interes" | "cliente";
+
 export interface Contact {
   id: string;
   channel: Channel;
@@ -19,6 +21,7 @@ export interface Contact {
   avatar_url: string | null;
   tags: string[];
   notes: string | null;
+  lead_status: LeadStatus | null;
   first_contact_at: string;
   last_contact_at: string;
   created_at: string;
