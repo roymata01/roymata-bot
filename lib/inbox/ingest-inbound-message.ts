@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { fetchInstagramProfile, fetchMessengerProfile } from "@/lib/meta/fetch-profile";
 import type { InboundMessage } from "@/lib/meta/types";
 
 // Idempotente: el índice único de messages(channel, meta_message_id) es la fuente
@@ -9,12 +10,34 @@ import type { InboundMessage } from "@/lib/meta/types";
 export async function ingestInboundMessage(msg: InboundMessage) {
   const supabase = createAdminClient();
 
+  const { data: existingContact } = await supabase
+    .from("contacts")
+    .select("id, display_name")
+    .eq("channel", msg.channel)
+    .eq("external_id", msg.externalId)
+    .maybeSingle();
+
+  let displayName = msg.displayName;
+  let avatarUrl: string | null = null;
+  if (!existingContact?.display_name) {
+    if (msg.channel === "instagram") {
+      const profile = await fetchInstagramProfile(msg.externalId);
+      displayName = displayName ?? profile.displayName;
+      avatarUrl = profile.avatarUrl;
+    } else if (msg.channel === "messenger") {
+      const profile = await fetchMessengerProfile(msg.externalId);
+      displayName = displayName ?? profile.displayName;
+      avatarUrl = profile.avatarUrl;
+    }
+  }
+
   const contactPayload: Record<string, unknown> = {
     channel: msg.channel,
     external_id: msg.externalId,
     last_contact_at: msg.timestamp,
   };
-  if (msg.displayName) contactPayload.display_name = msg.displayName;
+  if (displayName) contactPayload.display_name = displayName;
+  if (avatarUrl) contactPayload.avatar_url = avatarUrl;
   if (msg.channel === "whatsapp") contactPayload.phone = msg.externalId;
 
   const { data: contact, error: contactError } = await supabase

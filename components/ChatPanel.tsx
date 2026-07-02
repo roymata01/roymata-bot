@@ -54,11 +54,17 @@ export function ChatPanel({
   return (
     <div className="flex h-full flex-col bg-[#FAF8F2]">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-black px-5 py-3">
-        <div>
-          <p className="font-bold">{contact.display_name || contact.phone || contact.external_id}</p>
-          <div className="mt-1 flex items-center gap-2">
-            <ChannelBadge channel={conversation.channel} />
-            <StatusBadge status={conversation.status} />
+        <div className="flex items-center gap-3">
+          {contact.avatar_url ? (
+            // eslint-disable-next-line @next/next/no-img-element -- avatares vienen de un CDN externo (Instagram/Facebook)
+            <img src={contact.avatar_url} alt="" className="h-10 w-10 rounded-full border-2 border-black object-cover" />
+          ) : null}
+          <div>
+            <p className="font-bold">{contact.display_name || contact.phone || contact.external_id}</p>
+            <div className="mt-1 flex items-center gap-2">
+              <ChannelBadge channel={conversation.channel} />
+              <StatusBadge status={conversation.status} />
+            </div>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
