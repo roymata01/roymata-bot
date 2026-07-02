@@ -2,16 +2,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { ingestInboundMessage } from "@/lib/inbox/ingest-inbound-message";
 import { checkEscalation } from "@/lib/ai/check-escalation";
 import { generateAiReply } from "@/lib/ai/generate-reply";
-import { sendWhatsAppMessage } from "@/lib/meta/send-whatsapp";
-import { sendInstagramMessage } from "@/lib/meta/send-instagram";
-import { sendMessengerMessage } from "@/lib/meta/send-messenger";
+import { sendForChannel } from "@/lib/meta/send-message";
 import type { InboundMessage } from "@/lib/meta/types";
-
-async function sendForChannel(channel: InboundMessage["channel"], externalId: string, text: string) {
-  if (channel === "whatsapp") return sendWhatsAppMessage(externalId, text);
-  if (channel === "instagram") return sendInstagramMessage(externalId, text);
-  return sendMessengerMessage(externalId, text);
-}
 
 export async function processInboundMessage(msg: InboundMessage) {
   const ingested = await ingestInboundMessage(msg);

@@ -1,0 +1,209 @@
+"use client";
+
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { CHANNELS } from "@/lib/channels";
+import { STATUS_ORDER, STATUS_CONFIG } from "@/lib/inbox/status";
+import { ConversationListItem } from "@/components/ConversationListItem";
+import { ChatPanel } from "@/components/ChatPanel";
+import type { Channel, Contact, Conversation, ConversationStatus, Message } from "@/types/database";
+
+type ConversationWithContact = Conversation & { contact: Contact };
+
+export default function InboxPage() {
+  const supabase = useMemo(() => createBrowserSupabaseClient(), []);
+
+  const [conversations, setConversations] = useState<ConversationWithContact[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [channelFilter, setChannelFilter] = useState<Channel | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<ConversationStatus | "all">("all");
+
+  const loadConversations = useCallback(async () => {
+    const { data } = await supabase
+      .from("conversations")
+      .select("*, contact:contacts(*)")
+      .order("last_message_at", { ascending: false });
+    setConversations((data as ConversationWithContact[]) ?? []);
+  }, [supabase]);
+
+  const loadMessages = useCallback(
+    async (conversationId: string) => {
+      const { data } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("conversation_id", conversationId)
+        .order("created_at", { ascending: true });
+      setMessages((data as Message[]) ?? []);
+    },
+    [supabase]
+  );
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial de la bandeja
+    loadConversations();
+
+    const channel = supabase
+      .channel("inbox-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, () => {
+        loadConversations();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, (payload) => {
+        const row = (payload.new ?? payload.old) as Message | undefined;
+        if (row && row.conversation_id === selectedId) loadMessages(selectedId);
+        loadConversations();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase, selectedId]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga mensajes al cambiar de conversación
+    if (selectedId) loadMessages(selectedId);
+  }, [selectedId, loadMessages]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    supabase.from("conversations").update({ unread_count: 0 }).eq("id", selectedId).then();
+  }, [selectedId, supabase]);
+
+  const selected = conversations.find((c) => c.id === selectedId) ?? null;
+
+  const filtered = conversations.filter((c) => {
+    if (channelFilter !== "all" && c.channel !== channelFilter) return false;
+    if (statusFilter !== "all" && c.status !== statusFilter) return false;
+    if (search.trim()) {
+      const needle = search.trim().toLowerCase();
+      const haystack = `${c.contact.display_name ?? ""} ${c.contact.phone ?? ""} ${c.contact.external_id}`.toLowerCase();
+      if (!haystack.includes(needle)) return false;
+    }
+    return true;
+  });
+
+  const statusCounts = conversations.reduce<Record<string, number>>((acc, c) => {
+    acc[c.status] = (acc[c.status] ?? 0) + 1;
+    return acc;
+  }, {});
+  const porAtenderCount = statusCounts["por_atender"] ?? 0;
+
+  async function handleSendMessage(content: string) {
+    if (!selectedId) return;
+    const res = await fetch(`/api/conversations/${selectedId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content }),
+    });
+    await loadMessages(selectedId);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || "No se pudo enviar el mensaje");
+    }
+  }
+
+  async function handleUpdateConversation(patch: Partial<Pick<Conversation, "status" | "ai_enabled">>) {
+    if (!selectedId) return;
+    await supabase.from("conversations").update(patch).eq("id", selectedId);
+  }
+
+  return (
+    <div className="flex h-full">
+      <div className="flex w-96 shrink-0 flex-col border-r-2 border-black bg-white">
+        <div className="border-b-2 border-black p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar contacto..."
+              className="w-full rounded-lg border-2 border-black px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-orange-400"
+            />
+            {porAtenderCount > 0 && (
+              <span className="ml-2 shrink-0 rounded-full border-2 border-black bg-red-600 px-2 py-1 text-xs font-bold text-white">
+                {porAtenderCount} POR ATENDER
+              </span>
+            )}
+          </div>
+
+          <div className="mb-2 flex flex-wrap gap-1">
+            <button
+              onClick={() => setChannelFilter("all")}
+              className={`rounded-full border border-black/30 px-2 py-0.5 text-xs font-medium ${
+                channelFilter === "all" ? "bg-black text-white" : "bg-white"
+              }`}
+            >
+              Todos
+            </button>
+            {CHANNELS.map((c) => (
+              <button
+                key={c.key}
+                onClick={() => setChannelFilter(c.key)}
+                className={`rounded-full border border-black/30 px-2 py-0.5 text-xs font-medium ${
+                  channelFilter === c.key ? "text-white" : "bg-white"
+                }`}
+                style={channelFilter === c.key ? { backgroundColor: c.color } : undefined}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap gap-1">
+            <button
+              onClick={() => setStatusFilter("all")}
+              className={`rounded-full border border-black/30 px-2 py-0.5 text-xs font-medium ${
+                statusFilter === "all" ? "bg-black text-white" : "bg-white"
+              }`}
+            >
+              Todas
+            </button>
+            {STATUS_ORDER.map((status) => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                className={`rounded-full border border-black/30 px-2 py-0.5 text-xs font-medium ${
+                  statusFilter === status ? "bg-black text-white" : "bg-white"
+                }`}
+              >
+                {STATUS_CONFIG[status].label} ({statusCounts[status] ?? 0})
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {filtered.map((c) => (
+            <ConversationListItem
+              key={c.id}
+              conversation={c}
+              contact={c.contact}
+              selected={c.id === selectedId}
+              onClick={() => setSelectedId(c.id)}
+            />
+          ))}
+          {filtered.length === 0 && <p className="p-4 text-sm text-neutral-500">Sin conversaciones.</p>}
+        </div>
+      </div>
+
+      <div className="flex-1">
+        {selected ? (
+          <ChatPanel
+            key={selected.id}
+            conversation={selected}
+            contact={selected.contact}
+            messages={messages}
+            onSendMessage={handleSendMessage}
+            onUpdateConversation={handleUpdateConversation}
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-neutral-500">
+            Selecciona una conversación
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
