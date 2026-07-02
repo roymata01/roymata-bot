@@ -1,7 +1,10 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { escalateConversation } from "@/lib/ai/escalate-conversation";
 
-// Si el mensaje entrante contiene una palabra clave de emergencia, apaga la IA
-// y marca la conversación como "por atender" — no debe quedar un caso urgente solo con el bot.
+// Chequeo rápido y barato por palabras clave muy inequívocas (911, "no respira",
+// etc.) — corre antes del clasificador con IA para los casos más obvios.
+// Las palabras deben ser específicas de una emergencia activa, no temas de
+// curso (ej. "hemorragia" sola rompería con el curso de control de hemorragias).
 export async function checkEscalation(conversationId: string, messageContent: string | null): Promise<boolean> {
   if (!messageContent) return false;
 
@@ -20,11 +23,6 @@ export async function checkEscalation(conversationId: string, messageContent: st
   );
   if (!matched) return false;
 
-  const { error: updateError } = await supabase
-    .from("conversations")
-    .update({ status: "por_atender", ai_enabled: false })
-    .eq("id", conversationId);
-  if (updateError) throw updateError;
-
+  await escalateConversation(conversationId);
   return true;
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isBusinessRelevantForHistory } from "@/lib/ai/check-relevance";
+import { classifyMessageForHistory } from "@/lib/ai/classify-message";
 import { generateTestReply } from "@/lib/ai/generate-test-reply";
 
 export async function POST(req: NextRequest) {
@@ -40,8 +40,11 @@ async function handlePost(req: NextRequest) {
 
   const fullHistory = [...(history ?? []), { role: "user" as const, content: message }];
 
-  const relevant = await isBusinessRelevantForHistory(fullHistory);
-  if (!relevant) {
+  const category = await classifyMessageForHistory(fullHistory);
+  if (category === "emergencia") {
+    return NextResponse.json({ type: "escalation", keyword: null });
+  }
+  if (category === "personal") {
     return NextResponse.json({ type: "irrelevant" });
   }
 

@@ -39,14 +39,15 @@ export default function ProbarBotPage() {
       }
 
       if (body.type === "escalation") {
+        const reason = body.keyword ? `palabra clave: "${body.keyword}"` : "la IA detectó una posible emergencia real";
         setDisplay((prev) => [
           ...prev,
-          { kind: "note", content: `⚠️ Esto activaría escalación a humano (palabra clave: "${body.keyword}") — la IA no respondería, se marcaría "Por atender".` },
+          { kind: "note", content: `⚠️ Esto activaría escalación a humano (${reason}) — la IA no respondería, se marcaría "Por atender".` },
         ]);
       } else if (body.type === "irrelevant") {
         setDisplay((prev) => [
           ...prev,
-          { kind: "note", content: "🔇 La IA no respondería a este mensaje — el filtro de relevancia lo detectó como personal/no relacionado con tus servicios." },
+          { kind: "note", content: "🔇 La IA no respondería a este mensaje — el clasificador lo detectó como personal/no relacionado con tus servicios." },
         ]);
       } else if (body.type === "reply") {
         setDisplay((prev) => [...prev, { kind: "ai", content: body.reply }]);

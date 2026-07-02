@@ -1,7 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ingestInboundMessage } from "@/lib/inbox/ingest-inbound-message";
 import { checkEscalation } from "@/lib/ai/check-escalation";
-import { isBusinessRelevant } from "@/lib/ai/check-relevance";
+import { classifyMessage } from "@/lib/ai/classify-message";
+import { escalateConversation } from "@/lib/ai/escalate-conversation";
 import { generateAiReply } from "@/lib/ai/generate-reply";
 import { sendForChannel } from "@/lib/meta/send-message";
 import { runWorkflows } from "@/lib/workflows/run-workflows";
@@ -15,10 +16,10 @@ export async function processInboundMessage(msg: InboundMessage) {
 
   if (conversation.status !== "con_ia" || !conversation.ai_enabled) return;
 
-  // La escalación por emergencia y los workflows (etiquetar, marcar por atender) corren
-  // siempre, esté pausada la IA o no — son seguridad/organización, no "la IA hablando".
-  const escalated = await checkEscalation(conversation.id, msg.content);
-  if (escalated) return;
+  // La escalación (por palabra clave o por IA) y los workflows corren siempre,
+  // esté pausada la IA o no — son seguridad/organización, no "la IA hablando".
+  const escalatedByKeyword = await checkEscalation(conversation.id, msg.content);
+  if (escalatedByKeyword) return;
 
   const { blockAiReply } = await runWorkflows({
     conversationId: conversation.id,
@@ -29,6 +30,13 @@ export async function processInboundMessage(msg: InboundMessage) {
   });
   if (blockAiReply) return;
 
+  const category = await classifyMessage(conversation.id, msg.content);
+  if (category === "emergencia") {
+    await escalateConversation(conversation.id);
+    return;
+  }
+  if (category === "personal") return; // la IA no se mete, Roy contesta si quiere
+
   const supabaseCheck = createAdminClient();
   const { data: settings } = await supabaseCheck
     .from("assistant_settings")
@@ -36,9 +44,6 @@ export async function processInboundMessage(msg: InboundMessage) {
     .eq("id", 1)
     .single();
   if (settings?.is_paused) return; // apagado de emergencia: guarda el mensaje, no genera ni envía respuesta
-
-  const relevant = await isBusinessRelevant(conversation.id, msg.content);
-  if (!relevant) return; // mensaje personal/social: la IA no se mete, Roy contesta si quiere
 
   const { messageId, replyText } = await generateAiReply(conversation.id, msg.channel, contact.id);
   if (!replyText) return;

@@ -181,7 +181,7 @@ export default function PersonalizacionPage() {
           />
           <SettingsCard
             icon="🎯"
-            title="Solo negocio"
+            title="Clasificador de mensajes"
             preview={settings.relevance_filter_prompt}
             active={settings.relevance_filter_enabled}
             onToggleActive={toggleRelevanceFilter}
@@ -236,9 +236,13 @@ export default function PersonalizacionPage() {
       )}
 
       {target?.type === "relevance" && (
-        <EditModal title="Solo negocio — instrucciones del filtro" onClose={() => setTarget(null)} onSave={handleSave} saving={saving}>
+        <EditModal title="Clasificador de mensajes" onClose={() => setTarget(null)} onSave={handleSave} saving={saving}>
+          <p className="text-xs text-slate-500">
+            Con esto Claude decide si cada mensaje es de negocio, personal, o una emergencia real — controla si la
+            IA responde, se queda callada, o escala la conversación a &quot;Por atender&quot;.
+          </p>
           <label className="flex flex-col gap-1 text-sm">
-            Instrucciones que usa Claude para decidir si un mensaje es de negocio o personal
+            Contexto para el clasificador (quién eres, tu negocio)
             <textarea
               value={draftRelevancePrompt}
               onChange={(e) => setDraftRelevancePrompt(e.target.value)}
