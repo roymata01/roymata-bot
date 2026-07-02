@@ -75,6 +75,8 @@ export interface AssistantSettings {
   business_hours: Record<string, unknown>;
   off_hours_message: string | null;
   is_paused: boolean;
+  relevance_filter_enabled: boolean;
+  relevance_filter_prompt: string;
   updated_at: string;
 }
 

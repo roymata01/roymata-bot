@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ingestInboundMessage } from "@/lib/inbox/ingest-inbound-message";
 import { checkEscalation } from "@/lib/ai/check-escalation";
+import { isBusinessRelevant } from "@/lib/ai/check-relevance";
 import { generateAiReply } from "@/lib/ai/generate-reply";
 import { sendForChannel } from "@/lib/meta/send-message";
 import { runWorkflows } from "@/lib/workflows/run-workflows";
@@ -35,6 +36,9 @@ export async function processInboundMessage(msg: InboundMessage) {
     .eq("id", 1)
     .single();
   if (settings?.is_paused) return; // apagado de emergencia: guarda el mensaje, no genera ni envía respuesta
+
+  const relevant = await isBusinessRelevant(msg.content);
+  if (!relevant) return; // mensaje personal/social: la IA no se mete, Roy contesta si quiere
 
   const { messageId, replyText } = await generateAiReply(conversation.id, msg.channel, contact.id);
   if (!replyText) return;

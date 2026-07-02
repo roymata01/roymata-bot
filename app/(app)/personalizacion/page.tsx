@@ -86,6 +86,8 @@ export default function PersonalizacionPage() {
         off_hours_message: settings.off_hours_message,
         is_paused: settings.is_paused,
         escalation_keywords: keywords,
+        relevance_filter_enabled: settings.relevance_filter_enabled,
+        relevance_filter_prompt: settings.relevance_filter_prompt,
       })
       .eq("id", 1);
     flashSaved();
@@ -153,6 +155,34 @@ export default function PersonalizacionPage() {
                 onChange={(e) => setKeywordsDraft(e.target.value)}
                 rows={2}
                 className="rounded-lg border-2 border-black px-2 py-1.5"
+              />
+            </label>
+
+            <div className="mt-3 flex items-center justify-between rounded-lg border-2 border-black bg-blue-50 px-3 py-2">
+              <div>
+                <p className="font-semibold">Solo contestar mensajes de negocio</p>
+                <p className="text-xs text-neutral-600">
+                  Antes de responder, Claude analiza si el mensaje es sobre tus servicios o es personal — si es
+                  personal, no contesta (tú decides si le respondes).
+                </p>
+              </div>
+              <button
+                onClick={() => setSettings({ ...settings, relevance_filter_enabled: !settings.relevance_filter_enabled })}
+                className={`shrink-0 rounded-lg border-2 border-black px-3 py-1.5 text-sm font-semibold ${
+                  settings.relevance_filter_enabled ? "bg-emerald-500 text-white" : "bg-neutral-200"
+                }`}
+              >
+                {settings.relevance_filter_enabled ? "Activo" : "Apagado"}
+              </button>
+            </div>
+
+            <label className="mt-3 flex flex-col gap-1 text-sm">
+              Instrucciones del filtro de relevancia
+              <textarea
+                value={settings.relevance_filter_prompt}
+                onChange={(e) => setSettings({ ...settings, relevance_filter_prompt: e.target.value })}
+                rows={4}
+                className="rounded-lg border-2 border-black px-2 py-1.5 font-mono text-xs"
               />
             </label>
 
