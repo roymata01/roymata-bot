@@ -10,8 +10,10 @@ export function NavLink({ href, children }: { href: string; children: React.Reac
   return (
     <Link
       href={href}
-      className={`rounded-lg border-2 px-3 py-2 text-sm font-semibold transition ${
-        active ? "border-black bg-black text-white" : "border-transparent hover:border-black/30"
+      className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+        active
+          ? "border-orange-500/50 bg-orange-500/15 text-orange-300"
+          : "border-transparent text-slate-300 hover:border-white/15 hover:bg-white/5"
       }`}
     >
       {children}

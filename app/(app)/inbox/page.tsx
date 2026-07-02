@@ -112,17 +112,17 @@ export default function InboxPage() {
 
   return (
     <div className="flex h-full">
-      <div className="flex w-96 shrink-0 flex-col border-r-2 border-black bg-white">
-        <div className="border-b-2 border-black p-3">
+      <div className="flex w-96 shrink-0 flex-col border-r-2 border-white/10 bg-[#141C2F]">
+        <div className="border-b-2 border-white/10 p-3">
           <div className="mb-2 flex items-center justify-between">
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar contacto..."
-              className="w-full rounded-lg border-2 border-black px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-orange-400"
+              className="w-full rounded-lg border border-white/10 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-orange-400"
             />
             {porAtenderCount > 0 && (
-              <span className="ml-2 shrink-0 rounded-full border-2 border-black bg-red-600 px-2 py-1 text-xs font-bold text-white">
+              <span className="ml-2 shrink-0 rounded-full border border-white/10 bg-red-600 px-2 py-1 text-xs font-bold text-white">
                 {porAtenderCount} POR ATENDER
               </span>
             )}
@@ -131,8 +131,8 @@ export default function InboxPage() {
           <div className="mb-2 flex flex-wrap gap-1">
             <button
               onClick={() => setChannelFilter("all")}
-              className={`rounded-full border border-black/30 px-2 py-0.5 text-xs font-medium ${
-                channelFilter === "all" ? "bg-black text-white" : "bg-white"
+              className={`rounded-full border border-white/10 px-2 py-0.5 text-xs font-medium ${
+                channelFilter === "all" ? "bg-black text-white" : "bg-[#141C2F]"
               }`}
             >
               Todos
@@ -141,8 +141,8 @@ export default function InboxPage() {
               <button
                 key={c.key}
                 onClick={() => setChannelFilter(c.key)}
-                className={`rounded-full border border-black/30 px-2 py-0.5 text-xs font-medium ${
-                  channelFilter === c.key ? "text-white" : "bg-white"
+                className={`rounded-full border border-white/10 px-2 py-0.5 text-xs font-medium ${
+                  channelFilter === c.key ? "text-white" : "bg-[#141C2F]"
                 }`}
                 style={channelFilter === c.key ? { backgroundColor: c.color } : undefined}
               >
@@ -154,8 +154,8 @@ export default function InboxPage() {
           <div className="flex flex-wrap gap-1">
             <button
               onClick={() => setStatusFilter("all")}
-              className={`rounded-full border border-black/30 px-2 py-0.5 text-xs font-medium ${
-                statusFilter === "all" ? "bg-black text-white" : "bg-white"
+              className={`rounded-full border border-white/10 px-2 py-0.5 text-xs font-medium ${
+                statusFilter === "all" ? "bg-black text-white" : "bg-[#141C2F]"
               }`}
             >
               Todas
@@ -164,8 +164,8 @@ export default function InboxPage() {
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
-                className={`rounded-full border border-black/30 px-2 py-0.5 text-xs font-medium ${
-                  statusFilter === status ? "bg-black text-white" : "bg-white"
+                className={`rounded-full border border-white/10 px-2 py-0.5 text-xs font-medium ${
+                  statusFilter === status ? "bg-black text-white" : "bg-[#141C2F]"
                 }`}
               >
                 {STATUS_CONFIG[status].label} ({statusCounts[status] ?? 0})
@@ -184,7 +184,7 @@ export default function InboxPage() {
               onClick={() => setSelectedId(c.id)}
             />
           ))}
-          {filtered.length === 0 && <p className="p-4 text-sm text-neutral-500">Sin conversaciones.</p>}
+          {filtered.length === 0 && <p className="p-4 text-sm text-slate-500">Sin conversaciones.</p>}
         </div>
       </div>
 
@@ -199,7 +199,7 @@ export default function InboxPage() {
             onUpdateConversation={handleUpdateConversation}
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-neutral-500">
+          <div className="flex h-full items-center justify-center text-slate-500">
             Selecciona una conversación
           </div>
         )}

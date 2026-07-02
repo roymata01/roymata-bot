@@ -19,8 +19,8 @@ interface Metrics {
 
 function Card({ label, value, accent }: { label: string; value: string | number; accent?: string }) {
   return (
-    <div className={`rounded-2xl border-2 border-black bg-white p-4 ${accent ?? ""}`}>
-      <p className="text-xs font-medium text-neutral-600">{label}</p>
+    <div className={`rounded-2xl border border-white/10 bg-[#141C2F] p-4 ${accent ?? ""}`}>
+      <p className="text-xs font-medium text-slate-400">{label}</p>
       <p className="mt-1 text-3xl font-bold">{value}</p>
     </div>
   );
@@ -91,14 +91,14 @@ export default function ResumenPage() {
     load();
   }, [supabase]);
 
-  if (!metrics) return <div className="p-6 text-sm text-neutral-500">Cargando...</div>;
+  if (!metrics) return <div className="p-6 text-sm text-slate-500">Cargando...</div>;
 
   return (
     <div className="h-full overflow-y-auto p-6">
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
         <div>
           <h2 className="text-xl font-bold">Resumen</h2>
-          <p className="text-sm text-neutral-600">Métricas generales de la bandeja.</p>
+          <p className="text-sm text-slate-400">Métricas generales de la bandeja.</p>
         </div>
 
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -119,13 +119,13 @@ export default function ResumenPage() {
           />
         </div>
 
-        <section className="rounded-2xl border-2 border-black bg-white p-5">
+        <section className="rounded-2xl border border-white/10 bg-[#141C2F] p-5">
           <h3 className="mb-3 font-bold">Mensajes por canal</h3>
           <div className="flex flex-col gap-2">
             {CHANNELS.map((c) => (
               <div key={c.key} className="flex items-center gap-3">
                 <span className="w-24 text-sm font-medium">{c.label}</span>
-                <div className="h-4 flex-1 overflow-hidden rounded-full border border-black/20 bg-neutral-100">
+                <div className="h-4 flex-1 overflow-hidden rounded-full border border-white/10 bg-white/5">
                   <div
                     className="h-full"
                     style={{
@@ -140,16 +140,16 @@ export default function ResumenPage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border-2 border-black bg-white p-5">
+        <section className="rounded-2xl border border-white/10 bg-[#141C2F] p-5">
           <h3 className="mb-3 font-bold">Respuestas por IA vs. humano</h3>
           <div className="flex gap-6">
             <div>
-              <p className="text-2xl font-bold text-emerald-700">{metrics.mensajesIA}</p>
-              <p className="text-xs text-neutral-600">mensajes de la IA</p>
+              <p className="text-2xl font-bold text-emerald-400">{metrics.mensajesIA}</p>
+              <p className="text-xs text-slate-400">mensajes de la IA</p>
             </div>
             <div>
               <p className="text-2xl font-bold text-orange-700">{metrics.mensajesHumano}</p>
-              <p className="text-xs text-neutral-600">mensajes tuyos/de tu equipo</p>
+              <p className="text-xs text-slate-400">mensajes tuyos/de tu equipo</p>
             </div>
           </div>
         </section>

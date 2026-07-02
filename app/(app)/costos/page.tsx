@@ -31,7 +31,7 @@ export default function CostosPage() {
     load();
   }, [supabase]);
 
-  if (!logs) return <div className="p-6 text-sm text-neutral-500">Cargando...</div>;
+  if (!logs) return <div className="p-6 text-sm text-slate-500">Cargando...</div>;
 
   const totalCost = logs.reduce((sum, l) => sum + Number(l.cost_usd), 0);
   const totalCalls = logs.length;
@@ -66,50 +66,50 @@ export default function CostosPage() {
       <div className="mx-auto flex max-w-3xl flex-col gap-6">
         <div>
           <h2 className="text-xl font-bold">Costos</h2>
-          <p className="text-sm text-neutral-600">Consumo de tokens de Claude y costo estimado.</p>
+          <p className="text-sm text-slate-400">Consumo de tokens de Claude y costo estimado.</p>
         </div>
 
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div className="rounded-2xl border-2 border-black bg-white p-4">
-            <p className="text-xs font-medium text-neutral-600">Gasto total</p>
+          <div className="rounded-2xl border border-white/10 bg-[#141C2F] p-4">
+            <p className="text-xs font-medium text-slate-400">Gasto total</p>
             <p className="mt-1 text-2xl font-bold">{formatUsd(totalCost)}</p>
           </div>
-          <div className="rounded-2xl border-2 border-black bg-white p-4">
-            <p className="text-xs font-medium text-neutral-600">Este mes</p>
+          <div className="rounded-2xl border border-white/10 bg-[#141C2F] p-4">
+            <p className="text-xs font-medium text-slate-400">Este mes</p>
             <p className="mt-1 text-2xl font-bold">{formatUsd(costoEsteMes)}</p>
           </div>
-          <div className="rounded-2xl border-2 border-black bg-white p-4">
-            <p className="text-xs font-medium text-neutral-600">Respuestas generadas</p>
+          <div className="rounded-2xl border border-white/10 bg-[#141C2F] p-4">
+            <p className="text-xs font-medium text-slate-400">Respuestas generadas</p>
             <p className="mt-1 text-2xl font-bold">{totalCalls}</p>
           </div>
-          <div className="rounded-2xl border-2 border-black bg-white p-4">
-            <p className="text-xs font-medium text-neutral-600">Costo promedio / respuesta</p>
+          <div className="rounded-2xl border border-white/10 bg-[#141C2F] p-4">
+            <p className="text-xs font-medium text-slate-400">Costo promedio / respuesta</p>
             <p className="mt-1 text-2xl font-bold">{formatUsd(costoPromedioPorMensaje)}</p>
           </div>
         </div>
 
-        <section className="rounded-2xl border-2 border-black bg-white p-5">
+        <section className="rounded-2xl border border-white/10 bg-[#141C2F] p-5">
           <h3 className="mb-3 font-bold">Por modelo</h3>
           <div className="flex flex-col gap-2">
             {Object.entries(porModelo).map(([model, data]) => (
-              <div key={model} className="flex items-center justify-between border-b border-black/10 pb-2 text-sm">
+              <div key={model} className="flex items-center justify-between border-b border-white/10 pb-2 text-sm">
                 <span className="font-medium">{model}</span>
                 <span>
                   {data.calls} respuestas · {formatUsd(data.cost)}
                 </span>
               </div>
             ))}
-            {Object.keys(porModelo).length === 0 && <p className="text-sm text-neutral-500">Sin datos todavía.</p>}
+            {Object.keys(porModelo).length === 0 && <p className="text-sm text-slate-500">Sin datos todavía.</p>}
           </div>
         </section>
 
-        <section className="rounded-2xl border-2 border-black bg-white p-5">
+        <section className="rounded-2xl border border-white/10 bg-[#141C2F] p-5">
           <h3 className="mb-3 font-bold">Últimos días</h3>
           <div className="flex flex-col gap-1">
             {ultimosDias.map(([day, cost]) => (
               <div key={day} className="flex items-center gap-3 text-sm">
-                <span className="w-24 text-neutral-600">{day}</span>
-                <div className="h-3 flex-1 overflow-hidden rounded-full border border-black/20 bg-neutral-100">
+                <span className="w-24 text-slate-400">{day}</span>
+                <div className="h-3 flex-1 overflow-hidden rounded-full border border-white/10 bg-white/5">
                   <div
                     className="h-full bg-orange-500"
                     style={{ width: `${Math.min(100, (cost / Math.max(...ultimosDias.map((d) => d[1]), 0.0001)) * 100)}%` }}
@@ -118,7 +118,7 @@ export default function CostosPage() {
                 <span className="w-20 text-right">{formatUsd(cost)}</span>
               </div>
             ))}
-            {ultimosDias.length === 0 && <p className="text-sm text-neutral-500">Sin datos todavía.</p>}
+            {ultimosDias.length === 0 && <p className="text-sm text-slate-500">Sin datos todavía.</p>}
           </div>
         </section>
       </div>

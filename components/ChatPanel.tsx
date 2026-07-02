@@ -6,9 +6,9 @@ import { StatusBadge } from "@/components/StatusBadge";
 import type { Contact, Conversation, Message } from "@/types/database";
 
 function bubbleClass(message: Message) {
-  if (message.direction === "in") return "self-start bg-white border-2 border-black";
-  if (message.sender_type === "ai") return "self-end bg-emerald-100 border-2 border-emerald-500";
-  return "self-end bg-orange-100 border-2 border-orange-500";
+  if (message.direction === "in") return "self-start bg-[#141C2F] border border-white/10";
+  if (message.sender_type === "ai") return "self-end bg-emerald-500/15 border border-emerald-500/40";
+  return "self-end bg-orange-500/15 border border-orange-500/40";
 }
 
 function senderLabel(message: Message) {
@@ -52,12 +52,12 @@ export function ChatPanel({
   const isHumanControlled = conversation.status === "atendiendo" || !conversation.ai_enabled;
 
   return (
-    <div className="flex h-full flex-col bg-[#FAF8F2]">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-black px-5 py-3">
+    <div className="flex h-full flex-col bg-[#0F1729]">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-white/10 px-5 py-3">
         <div className="flex items-center gap-3">
           {contact.avatar_url ? (
             // eslint-disable-next-line @next/next/no-img-element -- avatares vienen de un CDN externo (Instagram/Facebook)
-            <img src={contact.avatar_url} alt="" className="h-10 w-10 rounded-full border-2 border-black object-cover" />
+            <img src={contact.avatar_url} alt="" className="h-10 w-10 rounded-full border border-white/10 object-cover" />
           ) : null}
           <div>
             <p className="font-bold">{contact.display_name || contact.phone || contact.external_id}</p>
@@ -71,14 +71,14 @@ export function ChatPanel({
           {isHumanControlled ? (
             <button
               onClick={() => onUpdateConversation({ status: "con_ia", ai_enabled: true })}
-              className="rounded-lg border-2 border-black bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-600"
+              className="rounded-lg border border-white/10 bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-600"
             >
               Reactivar IA
             </button>
           ) : (
             <button
               onClick={() => onUpdateConversation({ status: "atendiendo", ai_enabled: false })}
-              className="rounded-lg border-2 border-black bg-orange-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-orange-600"
+              className="rounded-lg border border-white/10 bg-orange-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-orange-600"
             >
               Apagar IA y atender yo
             </button>
@@ -86,7 +86,7 @@ export function ChatPanel({
           {conversation.status !== "cerrada" && (
             <button
               onClick={() => onUpdateConversation({ status: "cerrada", ai_enabled: false })}
-              className="rounded-lg border-2 border-black bg-white px-3 py-1.5 text-sm font-semibold hover:bg-neutral-100"
+              className="rounded-lg border border-white/10 bg-[#141C2F] px-3 py-1.5 text-sm font-semibold hover:bg-white/5"
             >
               Cerrar
             </button>
@@ -98,27 +98,27 @@ export function ChatPanel({
         {messages.map((message) => (
           <div key={message.id} className={`flex max-w-[70%] flex-col rounded-2xl px-3 py-2 ${bubbleClass(message)}`}>
             {senderLabel(message) && (
-              <span className="mb-0.5 text-[10px] font-bold uppercase text-neutral-500">{senderLabel(message)}</span>
+              <span className="mb-0.5 text-[10px] font-bold uppercase text-slate-500">{senderLabel(message)}</span>
             )}
             <p className="whitespace-pre-wrap text-sm">{message.content}</p>
           </div>
         ))}
-        {messages.length === 0 && <p className="text-sm text-neutral-500">Sin mensajes todavía.</p>}
+        {messages.length === 0 && <p className="text-sm text-slate-500">Sin mensajes todavía.</p>}
       </div>
 
-      <div className="border-t-2 border-black p-4">
-        {sendError && <p className="mb-2 text-sm text-red-600">{sendError}</p>}
+      <div className="border-t-2 border-white/10 p-4">
+        {sendError && <p className="mb-2 text-sm text-red-400">{sendError}</p>}
         <form onSubmit={handleSend} className="flex gap-2">
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Escribe tu respuesta..."
-            className="flex-1 rounded-lg border-2 border-black px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400"
+            className="flex-1 rounded-lg border border-white/10 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400"
           />
           <button
             type="submit"
             disabled={sending || !draft.trim()}
-            className="rounded-lg border-2 border-black bg-black px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+            className="rounded-lg border border-orange-500/60 bg-orange-500 hover:bg-orange-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
           >
             Enviar
           </button>

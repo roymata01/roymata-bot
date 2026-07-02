@@ -9,16 +9,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   } = await supabase.auth.getUser();
 
   return (
-    <div className="flex h-screen flex-col bg-[#F5F1E8]">
-      <header className="flex items-center justify-between border-b-2 border-black bg-[#F5F1E8] px-5 py-3">
+    <div className="flex h-screen flex-col bg-[#0B1220]">
+      <header className="flex items-center justify-between border-b-2 border-white/10 bg-[#0B1220] px-5 py-3">
         <h1 className="text-lg font-bold">VITA RESCUE INBOX</h1>
         <div className="flex items-center gap-3 text-sm">
-          <span className="text-neutral-600">{user?.email}</span>
+          <span className="text-slate-400">{user?.email}</span>
           <SignOutButton />
         </div>
       </header>
       <div className="flex flex-1 overflow-hidden">
-        <nav className="flex w-48 shrink-0 flex-col gap-1 border-r-2 border-black bg-[#FAF8F2] p-3">
+        <nav className="flex w-48 shrink-0 flex-col gap-1 border-r-2 border-white/10 bg-[#0F1729] p-3">
           <NavLink href="/resumen">Resumen</NavLink>
           <NavLink href="/inbox">Conversaciones</NavLink>
           <NavLink href="/crm">CRM</NavLink>

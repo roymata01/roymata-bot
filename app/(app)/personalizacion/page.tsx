@@ -93,31 +93,31 @@ export default function PersonalizacionPage() {
     flashSaved();
   }
 
-  if (loading) return <div className="p-6 text-sm text-neutral-500">Cargando...</div>;
+  if (loading) return <div className="p-6 text-sm text-slate-500">Cargando...</div>;
 
   return (
     <div className="h-full overflow-y-auto p-6">
       <div className="mx-auto flex max-w-3xl flex-col gap-6">
         <div>
           <h2 className="text-xl font-bold">Personalización</h2>
-          <p className="text-sm text-neutral-600">
+          <p className="text-sm text-slate-400">
             Aquí editas lo que Claude sabe y cómo se comporta. Se usa en cada respuesta automática.
           </p>
-          {savedAt && <p className="mt-1 text-sm font-medium text-emerald-700">Guardado ✓</p>}
+          {savedAt && <p className="mt-1 text-sm font-medium text-emerald-400">Guardado ✓</p>}
         </div>
 
         {settings && (
-          <section className="rounded-2xl border-2 border-black bg-white p-5">
+          <section className="rounded-2xl border border-white/10 bg-[#141C2F] p-5">
             <h3 className="mb-3 font-bold">Configuración del asistente</h3>
 
-            <div className="mb-3 flex items-center justify-between rounded-lg border-2 border-black bg-orange-50 px-3 py-2">
+            <div className="mb-3 flex items-center justify-between rounded-lg border border-white/10 bg-orange-500/10 px-3 py-2">
               <div>
                 <p className="font-semibold">Bot pausado (apagado de emergencia)</p>
-                <p className="text-xs text-neutral-600">Si está activo, se guardan los mensajes pero la IA no responde.</p>
+                <p className="text-xs text-slate-400">Si está activo, se guardan los mensajes pero la IA no responde.</p>
               </div>
               <button
                 onClick={() => setSettings({ ...settings, is_paused: !settings.is_paused })}
-                className={`rounded-lg border-2 border-black px-3 py-1.5 text-sm font-semibold ${
+                className={`rounded-lg border border-white/10 px-3 py-1.5 text-sm font-semibold ${
                   settings.is_paused ? "bg-red-500 text-white" : "bg-emerald-500 text-white"
                 }`}
               >
@@ -131,7 +131,7 @@ export default function PersonalizacionPage() {
                 <select
                   value={settings.model}
                   onChange={(e) => setSettings({ ...settings, model: e.target.value })}
-                  className="rounded-lg border-2 border-black px-2 py-1.5"
+                  className="rounded-lg border border-white/10 px-2 py-1.5"
                 >
                   <option value="claude-haiku-4-5">Claude Haiku 4.5 (rápido, económico)</option>
                   <option value="claude-sonnet-4-6">Claude Sonnet 4.6 (más inteligente)</option>
@@ -143,7 +143,7 @@ export default function PersonalizacionPage() {
                   type="number"
                   value={settings.max_tokens}
                   onChange={(e) => setSettings({ ...settings, max_tokens: Number(e.target.value) })}
-                  className="rounded-lg border-2 border-black px-2 py-1.5"
+                  className="rounded-lg border border-white/10 px-2 py-1.5"
                 />
               </label>
             </div>
@@ -154,22 +154,22 @@ export default function PersonalizacionPage() {
                 value={keywordsDraft}
                 onChange={(e) => setKeywordsDraft(e.target.value)}
                 rows={2}
-                className="rounded-lg border-2 border-black px-2 py-1.5"
+                className="rounded-lg border border-white/10 px-2 py-1.5"
               />
             </label>
 
-            <div className="mt-3 flex items-center justify-between rounded-lg border-2 border-black bg-blue-50 px-3 py-2">
+            <div className="mt-3 flex items-center justify-between rounded-lg border border-white/10 bg-blue-500/10 px-3 py-2">
               <div>
                 <p className="font-semibold">Solo contestar mensajes de negocio</p>
-                <p className="text-xs text-neutral-600">
+                <p className="text-xs text-slate-400">
                   Antes de responder, Claude analiza si el mensaje es sobre tus servicios o es personal — si es
                   personal, no contesta (tú decides si le respondes).
                 </p>
               </div>
               <button
                 onClick={() => setSettings({ ...settings, relevance_filter_enabled: !settings.relevance_filter_enabled })}
-                className={`shrink-0 rounded-lg border-2 border-black px-3 py-1.5 text-sm font-semibold ${
-                  settings.relevance_filter_enabled ? "bg-emerald-500 text-white" : "bg-neutral-200"
+                className={`shrink-0 rounded-lg border border-white/10 px-3 py-1.5 text-sm font-semibold ${
+                  settings.relevance_filter_enabled ? "bg-emerald-500 text-white" : "bg-white/10"
                 }`}
               >
                 {settings.relevance_filter_enabled ? "Activo" : "Apagado"}
@@ -182,7 +182,7 @@ export default function PersonalizacionPage() {
                 value={settings.relevance_filter_prompt}
                 onChange={(e) => setSettings({ ...settings, relevance_filter_prompt: e.target.value })}
                 rows={4}
-                className="rounded-lg border-2 border-black px-2 py-1.5 font-mono text-xs"
+                className="rounded-lg border border-white/10 px-2 py-1.5 font-mono text-xs"
               />
             </label>
 
@@ -192,13 +192,13 @@ export default function PersonalizacionPage() {
                 value={settings.off_hours_message ?? ""}
                 onChange={(e) => setSettings({ ...settings, off_hours_message: e.target.value })}
                 rows={2}
-                className="rounded-lg border-2 border-black px-2 py-1.5"
+                className="rounded-lg border border-white/10 px-2 py-1.5"
               />
             </label>
 
             <button
               onClick={saveSettings}
-              className="mt-4 rounded-lg border-2 border-black bg-black px-4 py-2 text-sm font-semibold text-white"
+              className="mt-4 rounded-lg border border-orange-500/60 bg-orange-500/100 hover:bg-orange-600 px-4 py-2 text-sm font-semibold text-white"
             >
               Guardar configuración
             </button>
@@ -210,7 +210,7 @@ export default function PersonalizacionPage() {
             <h3 className="font-bold">Base de conocimiento</h3>
             <button
               onClick={addSection}
-              className="rounded-lg border-2 border-black bg-white px-3 py-1.5 text-sm font-semibold hover:bg-neutral-100"
+              className="rounded-lg border border-white/10 bg-[#141C2F] px-3 py-1.5 text-sm font-semibold hover:bg-white/5"
             >
               + Agregar sección
             </button>
@@ -218,12 +218,12 @@ export default function PersonalizacionPage() {
 
           <div className="flex flex-col gap-4">
             {sections.map((section) => (
-              <div key={section.id} className="rounded-2xl border-2 border-black bg-white p-4">
+              <div key={section.id} className="rounded-2xl border border-white/10 bg-[#141C2F] p-4">
                 <div className="mb-2 flex items-center gap-2">
                   <input
                     value={section.title}
                     onChange={(e) => updateSection(section.id, { title: e.target.value })}
-                    className="flex-1 rounded-lg border-2 border-black px-2 py-1.5 text-sm font-semibold"
+                    className="flex-1 rounded-lg border border-white/10 px-2 py-1.5 text-sm font-semibold"
                   />
                   <label className="flex items-center gap-1 text-xs">
                     <input
@@ -238,18 +238,18 @@ export default function PersonalizacionPage() {
                   value={section.content}
                   onChange={(e) => updateSection(section.id, { content: e.target.value })}
                   rows={5}
-                  className="w-full rounded-lg border-2 border-black px-2 py-1.5 text-sm"
+                  className="w-full rounded-lg border border-white/10 px-2 py-1.5 text-sm"
                 />
                 <div className="mt-2 flex justify-end gap-2">
                   <button
                     onClick={() => deleteSection(section.id)}
-                    className="rounded-lg border-2 border-black px-3 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-50"
+                    className="rounded-lg border border-white/10 px-3 py-1.5 text-sm font-semibold text-red-400 hover:bg-red-500/10"
                   >
                     Borrar
                   </button>
                   <button
                     onClick={() => saveSection(section)}
-                    className="rounded-lg border-2 border-black bg-black px-3 py-1.5 text-sm font-semibold text-white"
+                    className="rounded-lg border border-orange-500/60 bg-orange-500/100 hover:bg-orange-600 px-3 py-1.5 text-sm font-semibold text-white"
                   >
                     Guardar sección
                   </button>

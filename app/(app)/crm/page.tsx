@@ -37,13 +37,13 @@ export default function CrmPage() {
 
   return (
     <div className="flex h-full">
-      <div className="flex w-96 shrink-0 flex-col border-r-2 border-black bg-white">
-        <div className="border-b-2 border-black p-3">
+      <div className="flex w-96 shrink-0 flex-col border-r-2 border-white/10 bg-[#141C2F]">
+        <div className="border-b-2 border-white/10 p-3">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar contacto..."
-            className="w-full rounded-lg border-2 border-black px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-orange-400"
+            className="w-full rounded-lg border border-white/10 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-orange-400"
           />
         </div>
         <div className="flex-1 overflow-y-auto">
@@ -51,15 +51,15 @@ export default function CrmPage() {
             <button
               key={c.id}
               onClick={() => setSelectedId(c.id)}
-              className={`flex w-full items-center gap-3 border-b border-black/10 px-4 py-3 text-left transition ${
-                c.id === selectedId ? "bg-orange-100" : "bg-white hover:bg-neutral-50"
+              className={`flex w-full items-center gap-3 border-b border-white/10 px-4 py-3 text-left transition ${
+                c.id === selectedId ? "bg-orange-500/15" : "bg-[#141C2F] hover:bg-white/5"
               }`}
             >
               {c.avatar_url ? (
                 // eslint-disable-next-line @next/next/no-img-element -- avatares de CDN externo
-                <img src={c.avatar_url} alt="" className="h-9 w-9 shrink-0 rounded-full border-2 border-black object-cover" />
+                <img src={c.avatar_url} alt="" className="h-9 w-9 shrink-0 rounded-full border border-white/10 object-cover" />
               ) : (
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-black bg-neutral-200 text-sm font-bold">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/10 text-sm font-bold">
                   {(c.display_name || c.external_id).replace("@", "").slice(0, 1).toUpperCase()}
                 </div>
               )}
@@ -67,18 +67,18 @@ export default function CrmPage() {
                 <p className="truncate font-semibold">{c.display_name || c.phone || c.external_id}</p>
                 <div className="mt-1 flex items-center gap-2">
                   <ChannelBadge channel={c.channel} />
-                  {c.tags.length > 0 && <span className="text-xs text-neutral-500">{c.tags.join(", ")}</span>}
+                  {c.tags.length > 0 && <span className="text-xs text-slate-500">{c.tags.join(", ")}</span>}
                 </div>
               </div>
             </button>
           ))}
-          {filtered.length === 0 && <p className="p-4 text-sm text-neutral-500">Sin contactos.</p>}
+          {filtered.length === 0 && <p className="p-4 text-sm text-slate-500">Sin contactos.</p>}
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">
         {!selected ? (
-          <p className="text-neutral-500">Selecciona un contacto.</p>
+          <p className="text-slate-500">Selecciona un contacto.</p>
         ) : (
           <ContactDetail key={selected.id} contact={selected} onSaved={handleSaved} />
         )}
