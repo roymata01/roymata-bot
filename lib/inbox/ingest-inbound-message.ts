@@ -58,6 +58,22 @@ export async function ingestInboundMessage(msg: InboundMessage) {
     .single();
   if (conversationError) throw conversationError;
 
+  // Si es el eco de algo que el panel/IA acaba de mandar pero cuyo mid aún no se
+  // guarda (el eco puede ganarle la carrera al UPDATE post-envío), reclama esa fila
+  // en vez de insertar una burbuja duplicada.
+  if (msg.isEcho && msg.content) {
+    const { data: claimed } = await supabase
+      .from("messages")
+      .update({ meta_message_id: msg.metaMessageId })
+      .eq("conversation_id", conversation.id)
+      .eq("direction", "out")
+      .is("meta_message_id", null)
+      .eq("content", msg.content)
+      .gte("created_at", new Date(Date.now() - 5 * 60_000).toISOString())
+      .select("id");
+    if (claimed && claimed.length > 0) return null;
+  }
+
   const { data: message, error: messageError } = await supabase
     .from("messages")
     .insert({
