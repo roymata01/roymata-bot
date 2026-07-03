@@ -4,14 +4,28 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { SettingsCard } from "@/components/SettingsCard";
 import { EditModal } from "@/components/EditModal";
+import {
+  AlertIcon,
+  BookIcon,
+  BoxIcon,
+  ChatIcon,
+  ClockIcon,
+  DocIcon,
+  FilterIcon,
+  IdIcon,
+  PlusIcon,
+  PowerIcon,
+  ShieldIcon,
+  SlidersIcon,
+} from "@/components/icons";
 import type { AssistantSettings, KnowledgeBaseSection } from "@/types/database";
 
-const SECTION_ICONS: Record<string, string> = {
-  identidad: "🪪",
-  tono: "💬",
-  servicios: "📚",
-  productos: "🎒",
-  reglas: "🛑",
+const SECTION_ICONS: Record<string, React.ReactNode> = {
+  identidad: <IdIcon />,
+  tono: <ChatIcon />,
+  servicios: <BookIcon />,
+  productos: <BoxIcon />,
+  reglas: <ShieldIcon />,
 };
 
 type EditTarget =
@@ -148,31 +162,25 @@ export default function PersonalizacionPage() {
     setTarget(null);
   }
 
-  if (loading || !settings) return <div className="p-6 text-sm text-slate-500">Cargando...</div>;
+  if (loading || !settings) return <div className="p-6 text-[13px] text-[var(--text-3)]">Cargando...</div>;
 
   return (
     <div className="h-full overflow-y-auto p-6">
-      <div className="mx-auto flex max-w-5xl flex-col gap-6">
+      <div className="mx-auto flex max-w-5xl flex-col gap-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold uppercase tracking-wide text-slate-400">
-              El cerebro del bot
-            </span>
-            <h2 className="text-xl font-bold">Personalización</h2>
+          <div>
+            <h2 className="page-title">Personalización</h2>
+            <p className="page-sub">El comportamiento y el conocimiento del bot, editable sin tocar código.</p>
           </div>
-          <span
-            className={`rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide ${
-              settings.is_paused ? "border-red-500/50 bg-red-500/15 text-red-300" : "border-emerald-500/50 bg-emerald-500/15 text-emerald-300"
-            }`}
-          >
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--text-2)]">
+            <span className={`h-1.5 w-1.5 rounded-full ${settings.is_paused ? "bg-[#e5484d]" : "bg-[#46b380]"}`} />
             {settings.is_paused ? "Agente pausado" : "Agente activo"}
           </span>
         </div>
-        <p className="-mt-4 text-sm text-slate-400">Personaliza el comportamiento y el conocimiento de tu agente para atender a tus clientes.</p>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <SettingsCard
-            icon="⏻"
+            icon={<PowerIcon />}
             title="Estado del bot"
             preview={settings.is_paused ? "Pausado: se guardan mensajes pero no responde." : "Activo: responde en vivo a mensajes reales."}
             active={!settings.is_paused}
@@ -180,7 +188,7 @@ export default function PersonalizacionPage() {
             onEdit={() => openEdit({ type: "bot_status" })}
           />
           <SettingsCard
-            icon="🎯"
+            icon={<FilterIcon />}
             title="Clasificador de mensajes"
             preview={settings.relevance_filter_prompt}
             active={settings.relevance_filter_enabled}
@@ -188,19 +196,19 @@ export default function PersonalizacionPage() {
             onEdit={() => openEdit({ type: "relevance" })}
           />
           <SettingsCard
-            icon="⚙️"
+            icon={<SlidersIcon />}
             title="Modelo y respuesta"
             preview={`${settings.model} · hasta ${settings.max_tokens} tokens por respuesta`}
             onEdit={() => openEdit({ type: "model" })}
           />
           <SettingsCard
-            icon="🚨"
+            icon={<AlertIcon />}
             title="Palabras de emergencia"
             preview={settings.escalation_keywords.join(", ")}
             onEdit={() => openEdit({ type: "keywords" })}
           />
           <SettingsCard
-            icon="🕒"
+            icon={<ClockIcon />}
             title="Mensaje fuera de horario"
             preview={settings.off_hours_message || "No configurado"}
             onEdit={() => openEdit({ type: "off_hours" })}
@@ -208,7 +216,7 @@ export default function PersonalizacionPage() {
           {sections.map((section) => (
             <SettingsCard
               key={section.id}
-              icon={SECTION_ICONS[section.section_key] ?? "📄"}
+              icon={SECTION_ICONS[section.section_key] ?? <DocIcon />}
               title={section.title}
               preview={section.content}
               active={section.is_active}
@@ -218,17 +226,17 @@ export default function PersonalizacionPage() {
           ))}
           <button
             onClick={() => openEdit({ type: "new_section" })}
-            className="flex min-h-[140px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/20 text-slate-400 hover:border-orange-500/50 hover:text-orange-300"
+            className="flex min-h-[120px] flex-col items-center justify-center gap-2 rounded-[10px] border border-dashed border-white/15 text-[var(--text-3)] transition hover:border-white/30 hover:text-[var(--text-2)]"
           >
-            <span className="text-2xl">+</span>
-            <span className="text-sm font-semibold">Agregar sección</span>
+            <PlusIcon size={18} />
+            <span className="text-[13px] font-medium">Agregar sección</span>
           </button>
         </div>
       </div>
 
       {target?.type === "bot_status" && (
         <EditModal title="Estado del bot" onClose={() => setTarget(null)} onSave={() => setTarget(null)}>
-          <p className="text-sm text-slate-400">
+          <p className="text-[13px] text-[var(--text-2)]">
             Usa el switch de la tarjeta para pausar o activar el bot. Cuando está pausado, los mensajes se siguen
             guardando pero la IA no genera ni envía respuesta.
           </p>
@@ -237,7 +245,7 @@ export default function PersonalizacionPage() {
 
       {target?.type === "relevance" && (
         <EditModal title="Clasificador de mensajes" onClose={() => setTarget(null)} onSave={handleSave} saving={saving}>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-[var(--text-3)]">
             Con esto Claude decide si cada mensaje es de negocio, personal, o una emergencia real — controla si la
             IA responde, se queda callada, o escala la conversación a &quot;Por atender&quot;.
           </p>
@@ -247,7 +255,7 @@ export default function PersonalizacionPage() {
               value={draftRelevancePrompt}
               onChange={(e) => setDraftRelevancePrompt(e.target.value)}
               rows={8}
-              className="rounded-lg border border-white/10 bg-[#0B1220] px-2 py-1.5 font-mono text-xs"
+              className="input font-mono !text-xs"
             />
           </label>
         </EditModal>
@@ -260,7 +268,7 @@ export default function PersonalizacionPage() {
             <select
               value={draftModel}
               onChange={(e) => setDraftModel(e.target.value)}
-              className="rounded-lg border border-white/10 bg-[#0B1220] px-2 py-1.5"
+              className="input"
             >
               <option value="claude-haiku-4-5">Claude Haiku 4.5 (rápido, económico)</option>
               <option value="claude-sonnet-4-6">Claude Sonnet 4.6 (más inteligente)</option>
@@ -272,7 +280,7 @@ export default function PersonalizacionPage() {
               type="number"
               value={draftMaxTokens}
               onChange={(e) => setDraftMaxTokens(Number(e.target.value))}
-              className="rounded-lg border border-white/10 bg-[#0B1220] px-2 py-1.5"
+              className="input"
             />
           </label>
         </EditModal>
@@ -286,7 +294,7 @@ export default function PersonalizacionPage() {
               value={draftKeywords}
               onChange={(e) => setDraftKeywords(e.target.value)}
               rows={4}
-              className="rounded-lg border border-white/10 bg-[#0B1220] px-2 py-1.5 text-sm"
+              className="input"
             />
           </label>
         </EditModal>
@@ -298,7 +306,7 @@ export default function PersonalizacionPage() {
             value={draftOffHours}
             onChange={(e) => setDraftOffHours(e.target.value)}
             rows={4}
-            className="rounded-lg border border-white/10 bg-[#0B1220] px-2 py-1.5 text-sm"
+            className="input"
           />
         </EditModal>
       )}
@@ -315,7 +323,7 @@ export default function PersonalizacionPage() {
             <input
               value={draftSectionTitle}
               onChange={(e) => setDraftSectionTitle(e.target.value)}
-              className="rounded-lg border border-white/10 bg-[#0B1220] px-2 py-1.5"
+              className="input"
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
@@ -324,7 +332,7 @@ export default function PersonalizacionPage() {
               value={draftSectionContent}
               onChange={(e) => setDraftSectionContent(e.target.value)}
               rows={10}
-              className="rounded-lg border border-white/10 bg-[#0B1220] px-2 py-1.5 text-sm"
+              className="input"
             />
           </label>
           {target.type === "section" && (

@@ -128,91 +128,62 @@ export default function InboxPage() {
 
   return (
     <div className="flex h-full">
-      <div className="flex w-96 shrink-0 flex-col border-r-2 border-white/10 bg-[#141C2F]">
-        <div className="border-b-2 border-white/10 p-3">
-          <div className="mb-2 flex items-center justify-between">
+      <div className="flex w-[380px] shrink-0 flex-col border-r border-[var(--border)] bg-[var(--surface)]">
+        <div className="border-b border-[var(--border)] p-3">
+          <div className="mb-2.5 flex items-center gap-2">
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar contacto..."
-              className="w-full rounded-lg border border-white/10 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-orange-400"
+              className="input"
             />
             {porAtenderCount > 0 && (
-              <span className="ml-2 shrink-0 rounded-full border border-white/10 bg-red-600 px-2 py-1 text-xs font-bold text-white">
-                {porAtenderCount} POR ATENDER
+              <span className="num shrink-0 rounded-md bg-[#e5484d]/15 px-2 py-1 text-[11px] font-semibold text-[#e5484d]">
+                {porAtenderCount} por atender
               </span>
             )}
           </div>
 
-          <div className="mb-2 flex flex-wrap gap-1">
-            <button
-              onClick={() => setChannelFilter("all")}
-              className={`rounded-full border border-white/10 px-2 py-0.5 text-xs font-medium ${
-                channelFilter === "all" ? "bg-orange-500 text-white" : "bg-[#141C2F]"
-              }`}
-            >
+          <div className="mb-1.5 flex flex-wrap gap-1">
+            <button onClick={() => setChannelFilter("all")} className={`chip ${channelFilter === "all" ? "chip-on" : ""}`}>
               Todos
             </button>
             {CHANNELS.map((c) => (
               <button
                 key={c.key}
                 onClick={() => setChannelFilter(c.key)}
-                className={`rounded-full border border-white/10 px-2 py-0.5 text-xs font-medium ${
-                  channelFilter === c.key ? "text-white" : "bg-[#141C2F]"
-                }`}
-                style={channelFilter === c.key ? { backgroundColor: c.color } : undefined}
+                className={`chip ${channelFilter === c.key ? "chip-on" : ""}`}
               >
+                <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full align-middle" style={{ backgroundColor: c.color }} />
                 {c.label}
               </button>
             ))}
           </div>
 
-          <div className="mb-2 flex flex-wrap gap-1">
-            <button
-              onClick={() => setStatusFilter("all")}
-              className={`rounded-full border border-white/10 px-2 py-0.5 text-xs font-medium ${
-                statusFilter === "all" ? "bg-orange-500 text-white" : "bg-[#141C2F]"
-              }`}
-            >
+          <div className="mb-1.5 flex flex-wrap gap-1">
+            <button onClick={() => setStatusFilter("all")} className={`chip ${statusFilter === "all" ? "chip-on" : ""}`}>
               Todas
             </button>
             {STATUS_ORDER.map((status) => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
-                className={`rounded-full border border-white/10 px-2 py-0.5 text-xs font-medium ${
-                  statusFilter === status ? "bg-orange-500 text-white" : "bg-[#141C2F]"
-                }`}
+                className={`chip num ${statusFilter === status ? "chip-on" : ""}`}
               >
-                {STATUS_CONFIG[status].label} ({statusCounts[status] ?? 0})
+                {STATUS_CONFIG[status].label} <span className="text-[var(--text-3)]">{statusCounts[status] ?? 0}</span>
               </button>
             ))}
           </div>
 
           <div className="flex flex-wrap gap-1">
-            <button
-              onClick={() => setAiFilter("all")}
-              className={`rounded-full border border-white/10 px-2 py-0.5 text-xs font-medium ${
-                aiFilter === "all" ? "bg-orange-500 text-white" : "bg-[#141C2F]"
-              }`}
-            >
+            <button onClick={() => setAiFilter("all")} className={`chip ${aiFilter === "all" ? "chip-on" : ""}`}>
               Todas
             </button>
-            <button
-              onClick={() => setAiFilter("answered")}
-              className={`rounded-full border border-white/10 px-2 py-0.5 text-xs font-medium ${
-                aiFilter === "answered" ? "bg-emerald-500 text-white" : "bg-[#141C2F]"
-              }`}
-            >
-              Negocio — bot contestó ({answeredCount})
+            <button onClick={() => setAiFilter("answered")} className={`chip num ${aiFilter === "answered" ? "chip-on" : ""}`}>
+              Negocio · bot contestó <span className="text-[var(--text-3)]">{answeredCount}</span>
             </button>
-            <button
-              onClick={() => setAiFilter("personal")}
-              className={`rounded-full border border-white/10 px-2 py-0.5 text-xs font-medium ${
-                aiFilter === "personal" ? "bg-blue-500 text-white" : "bg-[#141C2F]"
-              }`}
-            >
-              Personal — sin respuesta ({personalCount})
+            <button onClick={() => setAiFilter("personal")} className={`chip num ${aiFilter === "personal" ? "chip-on" : ""}`}>
+              Personal <span className="text-[var(--text-3)]">{personalCount}</span>
             </button>
           </div>
         </div>
@@ -227,7 +198,7 @@ export default function InboxPage() {
               onClick={() => setSelectedId(c.id)}
             />
           ))}
-          {filtered.length === 0 && <p className="p-4 text-sm text-slate-500">Sin conversaciones.</p>}
+          {filtered.length === 0 && <p className="p-4 text-[13px] text-[var(--text-3)]">Sin conversaciones.</p>}
         </div>
       </div>
 
@@ -242,7 +213,7 @@ export default function InboxPage() {
             onUpdateConversation={handleUpdateConversation}
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-slate-500">
+          <div className="flex h-full items-center justify-center text-[13px] text-[var(--text-3)]">
             Selecciona una conversación
           </div>
         )}

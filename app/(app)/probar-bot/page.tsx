@@ -43,12 +43,12 @@ export default function ProbarBotPage() {
         const reason = body.keyword ? `palabra clave: "${body.keyword}"` : "la IA detectó una posible emergencia real";
         setDisplay((prev) => [
           ...prev,
-          { kind: "note", content: `⚠️ Esto activaría escalación a humano (${reason}) — la IA no respondería, se marcaría "Por atender".` },
+          { kind: "note", content: `Esto activaría escalación a humano (${reason}) — la IA no respondería, se marcaría "Por atender".` },
         ]);
       } else if (body.type === "irrelevant") {
         setDisplay((prev) => [
           ...prev,
-          { kind: "note", content: "🔇 La IA no respondería a este mensaje — el clasificador lo detectó como personal/no relacionado con tus servicios." },
+          { kind: "note", content: "La IA no respondería a este mensaje — el clasificador lo detectó como personal/no relacionado con tus servicios." },
         ]);
       } else if (body.type === "reply") {
         setDisplay((prev) => [...prev, { kind: "ai", content: body.reply }]);
@@ -69,10 +69,10 @@ export default function ProbarBotPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+      <div className="flex items-center justify-between gap-4 border-b border-[var(--border)] px-6 py-4">
         <div>
-          <h2 className="text-xl font-bold">Probar el bot</h2>
-          <p className="text-sm text-slate-400">
+          <h2 className="page-title">Probar el bot</h2>
+          <p className="page-sub">
             Escríbele como si fueras un cliente. Usa el mismo tono, base de conocimiento y reglas que el bot real —
             no se guarda en tu bandeja ni se manda a ningún canal.
           </p>
@@ -82,12 +82,9 @@ export default function ProbarBotPage() {
             value={customerName}
             onChange={(e) => setCustomerName(e.target.value)}
             placeholder="Nombre del cliente (opcional)"
-            className="w-48 rounded-lg border border-white/10 bg-[#141C2F] px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-orange-400"
+            className="input !w-48"
           />
-          <button
-            onClick={reset}
-            className="rounded-lg border border-white/10 px-3 py-1.5 text-sm font-semibold hover:bg-white/5"
-          >
+          <button onClick={reset} className="btn btn-ghost">
             Reiniciar conversación
           </button>
         </div>
@@ -95,43 +92,41 @@ export default function ProbarBotPage() {
 
       <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-2 overflow-y-auto p-6">
         {display.length === 0 && (
-          <p className="text-sm text-slate-500">Escribe algo abajo para empezar, por ejemplo &quot;cuánto cuesta el curso de RCP&quot;.</p>
+          <p className="text-[13px] text-[var(--text-3)]">Escribe algo abajo para empezar, por ejemplo &quot;cuánto cuesta el curso de RCP&quot;.</p>
         )}
         {display.map((item, i) =>
           item.kind === "note" ? (
-            <div key={i} className="self-center rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-2 text-center text-xs text-orange-300">
+            <div key={i} className="self-center rounded-md border border-[#f0b429]/25 bg-[#f0b429]/[0.07] px-3 py-2 text-center text-xs text-[#f0b429]">
               {item.content}
             </div>
           ) : (
             <div
               key={i}
-              className={`flex max-w-[75%] flex-col rounded-2xl px-3 py-2 ${
+              className={`flex max-w-[75%] flex-col rounded-xl px-3 py-2 ${
                 item.kind === "user"
-                  ? "self-start bg-[#141C2F] border border-white/10"
-                  : "self-end bg-emerald-500/15 border border-emerald-500/40"
+                  ? "self-start border border-[var(--border)] bg-[var(--surface-2)]"
+                  : "self-end border border-[#46b380]/20 bg-[#46b380]/[0.08]"
               }`}
             >
-              {item.kind === "ai" && <span className="mb-0.5 text-[10px] font-bold uppercase text-slate-500">IA</span>}
-              <p className="whitespace-pre-wrap text-sm">{item.content}</p>
+              {item.kind === "ai" && (
+                <span className="mb-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-3)]">IA</span>
+              )}
+              <p className="whitespace-pre-wrap text-[13px] leading-relaxed">{item.content}</p>
             </div>
           )
         )}
-        {sending && <p className="self-end text-xs text-slate-500">Escribiendo...</p>}
-        {error && <p className="self-center text-sm text-red-400">{error}</p>}
+        {sending && <p className="self-end text-[11px] text-[var(--text-3)]">Escribiendo...</p>}
+        {error && <p className="self-center text-[13px] text-[#e5484d]">{error}</p>}
       </div>
 
-      <form onSubmit={handleSend} className="mx-auto flex w-full max-w-2xl gap-2 border-t border-white/10 p-4">
+      <form onSubmit={handleSend} className="mx-auto flex w-full max-w-2xl gap-2 border-t border-[var(--border)] p-4">
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Escribe como si fueras un cliente..."
-          className="flex-1 rounded-lg border border-white/10 bg-[#141C2F] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400"
+          className="input !py-2"
         />
-        <button
-          type="submit"
-          disabled={sending || !draft.trim()}
-          className="rounded-lg border border-orange-500/60 bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-40"
-        >
+        <button type="submit" disabled={sending || !draft.trim()} className="btn btn-primary">
           Enviar
         </button>
       </form>

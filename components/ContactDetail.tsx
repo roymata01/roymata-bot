@@ -43,40 +43,38 @@ export function ContactDetail({
   }
 
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-5">
+    <div className="mx-auto flex max-w-xl flex-col gap-4">
       <div className="flex items-center gap-3">
         {contact.avatar_url ? (
           // eslint-disable-next-line @next/next/no-img-element -- avatares de CDN externo
-          <img src={contact.avatar_url} alt="" className="h-14 w-14 rounded-full border border-white/10 object-cover" />
+          <img src={contact.avatar_url} alt="" className="h-12 w-12 rounded-full object-cover" />
         ) : null}
         <div>
-          <h2 className="text-xl font-bold">{contact.display_name || contact.phone || contact.external_id}</h2>
-          <div className="mt-1 flex items-center gap-2">
+          <h2 className="text-[15px] font-semibold">{contact.display_name || contact.phone || contact.external_id}</h2>
+          <div className="mt-1 flex items-center gap-2.5">
             <ChannelBadge channel={contact.channel} />
-            {contact.phone && <span className="text-sm text-slate-400">{contact.phone}</span>}
+            {contact.phone && <span className="text-[13px] text-[var(--text-2)]">{contact.phone}</span>}
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 text-sm">
-        <div className="rounded-lg border border-white/10 bg-[#141C2F] p-3">
-          <p className="text-xs text-slate-500">Primer contacto</p>
-          <p className="font-medium">{new Date(contact.first_contact_at).toLocaleString("es-MX")}</p>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="card p-3">
+          <p className="label-xs">Primer contacto</p>
+          <p className="num mt-1 text-[13px] font-medium">{new Date(contact.first_contact_at).toLocaleString("es-MX")}</p>
         </div>
-        <div className="rounded-lg border border-white/10 bg-[#141C2F] p-3">
-          <p className="text-xs text-slate-500">Último contacto</p>
-          <p className="font-medium">{new Date(contact.last_contact_at).toLocaleString("es-MX")}</p>
+        <div className="card p-3">
+          <p className="label-xs">Último contacto</p>
+          <p className="num mt-1 text-[13px] font-medium">{new Date(contact.last_contact_at).toLocaleString("es-MX")}</p>
         </div>
       </div>
 
-      <section className="rounded-2xl border border-white/10 bg-[#141C2F] p-4">
-        <p className="mb-2 text-sm">Estado del lead</p>
-        <div className="flex flex-wrap gap-2">
+      <section className="card p-4">
+        <p className="label-xs mb-2.5">Estado del lead</p>
+        <div className="flex flex-wrap gap-1.5">
           <button
             onClick={() => setLeadStatusDraft(null)}
-            className={`rounded-full border px-3 py-1 text-xs font-medium ${
-              leadStatusDraft === null ? "border-white/40 bg-white/10 text-white" : "border-white/10 text-slate-400"
-            }`}
+            className={`chip ${leadStatusDraft === null ? "chip-on" : ""}`}
           >
             Sin clasificar
           </button>
@@ -87,9 +85,7 @@ export function ContactDetail({
               <button
                 key={status}
                 onClick={() => setLeadStatusDraft(status)}
-                className={`rounded-full border px-3 py-1 text-xs font-medium ${
-                  active ? config.className : "border-white/10 text-slate-400"
-                }`}
+                className={active ? `rounded border px-2 py-[3px] text-xs font-medium ${config.className}` : "chip"}
               >
                 {config.label}
               </button>
@@ -98,44 +94,39 @@ export function ContactDetail({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-white/10 bg-[#141C2F] p-4">
-        <label className="flex flex-col gap-1 text-sm">
-          Etiquetas (separadas por coma)
+      <section className="card p-4">
+        <label className="flex flex-col gap-1.5">
+          <span className="label-xs">Etiquetas (separadas por coma)</span>
           <input
             value={tagsDraft}
             onChange={(e) => setTagsDraft(e.target.value)}
             placeholder="ej. interesado en curso, ya compró, lead frío"
-            className="rounded-lg border border-white/10 px-2 py-1.5"
+            className="input"
           />
         </label>
-        <label className="mt-3 flex flex-col gap-1 text-sm">
-          Notas
-          <textarea
-            value={notesDraft}
-            onChange={(e) => setNotesDraft(e.target.value)}
-            rows={4}
-            className="rounded-lg border border-white/10 px-2 py-1.5"
-          />
+        <label className="mt-3 flex flex-col gap-1.5">
+          <span className="label-xs">Notas</span>
+          <textarea value={notesDraft} onChange={(e) => setNotesDraft(e.target.value)} rows={4} className="input" />
         </label>
         <div className="mt-3 flex items-center gap-3">
-          <button onClick={saveContact} className="rounded-lg border border-orange-500/60 bg-orange-500 hover:bg-orange-600 px-4 py-1.5 text-sm font-semibold text-white">
+          <button onClick={saveContact} className="btn btn-primary">
             Guardar
           </button>
-          {savedAt && <span className="text-sm font-medium text-emerald-400">Guardado ✓</span>}
+          {savedAt && <span className="text-[13px] font-medium text-[#46b380]">Guardado</span>}
         </div>
       </section>
 
-      <section className="rounded-2xl border border-white/10 bg-[#141C2F] p-4">
-        <h3 className="mb-2 font-bold">Conversaciones</h3>
+      <section className="card p-4">
+        <p className="label-xs mb-2">Conversaciones</p>
         {conversations.map((conv) => (
-          <div key={conv.id} className="border-b border-white/10 py-2 text-sm last:border-0">
+          <div key={conv.id} className="border-b border-[var(--border)] py-2 text-[13px] last:border-0">
             <p className="font-medium">{conv.last_message_preview || "—"}</p>
-            <p className="text-xs text-slate-500">
+            <p className="num mt-0.5 text-[11px] text-[var(--text-3)]">
               {conv.status} · {conv.last_message_at ? new Date(conv.last_message_at).toLocaleString("es-MX") : "sin mensajes"}
             </p>
           </div>
         ))}
-        {conversations.length === 0 && <p className="text-sm text-slate-500">Sin conversaciones.</p>}
+        {conversations.length === 0 && <p className="text-[13px] text-[var(--text-3)]">Sin conversaciones.</p>}
       </section>
     </div>
   );

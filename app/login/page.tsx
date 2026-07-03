@@ -29,10 +29,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0B1220] px-4">
-      <div className="w-full max-w-sm rounded-2xl border border-orange-500/30 bg-[#141C2F] p-8 shadow-[0_0_50px_-15px_rgba(249,115,22,0.4)]">
-        <h1 className="text-2xl font-bold mb-1">VITA RESCUE INBOX</h1>
-        <p className="text-sm text-slate-400 mb-6">Escribe la contraseña para entrar.</p>
+    <div className="flex min-h-screen items-center justify-center bg-[var(--bg)] px-4">
+      <div className="card w-full max-w-sm p-8">
+        <div className="mb-6 flex items-center gap-2.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-[var(--accent)] text-[13px] font-bold text-white">
+            V
+          </span>
+          <div>
+            <h1 className="text-[14px] font-semibold tracking-wide">VITA RESCUE</h1>
+            <p className="text-xs text-[var(--text-3)]">Inbox</p>
+          </div>
+        </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <input
@@ -41,16 +48,12 @@ export default function LoginPage() {
             placeholder="Contraseña"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="rounded-lg border border-white/10 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400"
+            className="input !py-2"
           />
-          <button
-            type="submit"
-            disabled={status === "loading"}
-            className="rounded-lg border border-white/10 bg-orange-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:opacity-60"
-          >
+          <button type="submit" disabled={status === "loading"} className="btn btn-primary !py-2">
             {status === "loading" ? "Entrando..." : "Entrar"}
           </button>
-          {status === "error" && <p className="text-sm text-red-400">Contraseña incorrecta.</p>}
+          {status === "error" && <p className="text-[13px] text-[#e5484d]">Contraseña incorrecta.</p>}
         </form>
       </div>
     </div>

@@ -19,9 +19,9 @@ interface Metrics {
 
 function Card({ label, value, accent }: { label: string; value: string | number; accent?: string }) {
   return (
-    <div className={`rounded-2xl border border-white/10 bg-[#141C2F] p-4 ${accent ?? ""}`}>
-      <p className="text-xs font-medium text-slate-400">{label}</p>
-      <p className="mt-1 text-3xl font-bold">{value}</p>
+    <div className={`card p-4 ${accent ?? ""}`}>
+      <p className="label-xs">{label}</p>
+      <p className="num mt-1.5 text-2xl font-semibold">{value}</p>
     </div>
   );
 }
@@ -91,19 +91,19 @@ export default function ResumenPage() {
     load();
   }, [supabase]);
 
-  if (!metrics) return <div className="p-6 text-sm text-slate-500">Cargando...</div>;
+  if (!metrics) return <div className="p-6 text-[13px] text-[var(--text-3)]">Cargando...</div>;
 
   return (
     <div className="h-full overflow-y-auto p-6">
-      <div className="mx-auto flex max-w-4xl flex-col gap-6">
+      <div className="mx-auto flex max-w-4xl flex-col gap-5">
         <div>
-          <h2 className="text-xl font-bold">Resumen</h2>
-          <p className="text-sm text-slate-400">Métricas generales de la bandeja.</p>
+          <h2 className="page-title">Resumen</h2>
+          <p className="page-sub">Métricas generales de la bandeja.</p>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <Card label="Conversaciones totales" value={metrics.total} />
-          <Card label="Por atender" value={metrics.porAtender} accent="border-red-500" />
+          <Card label="Por atender" value={metrics.porAtender} accent={metrics.porAtender > 0 ? "!border-[#e5484d]/40" : ""} />
           <Card label="Con IA" value={metrics.conIA} />
           <Card label="Atendiendo (humano)" value={metrics.atendiendo} />
           <Card label="Cerradas" value={metrics.cerradas} />
@@ -119,37 +119,37 @@ export default function ResumenPage() {
           />
         </div>
 
-        <section className="rounded-2xl border border-white/10 bg-[#141C2F] p-5">
-          <h3 className="mb-3 font-bold">Mensajes por canal</h3>
-          <div className="flex flex-col gap-2">
+        <section className="card p-5">
+          <p className="label-xs mb-3">Mensajes por canal</p>
+          <div className="flex flex-col gap-2.5">
             {CHANNELS.map((c) => (
               <div key={c.key} className="flex items-center gap-3">
-                <span className="w-24 text-sm font-medium">{c.label}</span>
-                <div className="h-4 flex-1 overflow-hidden rounded-full border border-white/10 bg-white/5">
+                <span className="w-24 text-[13px] font-medium">{c.label}</span>
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
                   <div
-                    className="h-full"
+                    className="h-full rounded-full"
                     style={{
                       width: `${Math.min(100, (metrics.mensajesPorCanal[c.key] / Math.max(1, metrics.mensajesPorCanal.whatsapp + metrics.mensajesPorCanal.instagram + metrics.mensajesPorCanal.messenger)) * 100)}%`,
                       backgroundColor: c.color,
                     }}
                   />
                 </div>
-                <span className="w-10 text-right text-sm">{metrics.mensajesPorCanal[c.key]}</span>
+                <span className="num w-10 text-right text-[13px] text-[var(--text-2)]">{metrics.mensajesPorCanal[c.key]}</span>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-[#141C2F] p-5">
-          <h3 className="mb-3 font-bold">Respuestas por IA vs. humano</h3>
-          <div className="flex gap-6">
+        <section className="card p-5">
+          <p className="label-xs mb-3">Respuestas por IA vs. humano</p>
+          <div className="flex gap-8">
             <div>
-              <p className="text-2xl font-bold text-emerald-400">{metrics.mensajesIA}</p>
-              <p className="text-xs text-slate-400">mensajes de la IA</p>
+              <p className="num text-2xl font-semibold text-[#46b380]">{metrics.mensajesIA}</p>
+              <p className="mt-0.5 text-xs text-[var(--text-2)]">mensajes de la IA</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-orange-700">{metrics.mensajesHumano}</p>
-              <p className="text-xs text-slate-400">mensajes tuyos/de tu equipo</p>
+              <p className="num text-2xl font-semibold text-[var(--accent)]">{metrics.mensajesHumano}</p>
+              <p className="mt-0.5 text-xs text-[var(--text-2)]">mensajes tuyos/de tu equipo</p>
             </div>
           </div>
         </section>

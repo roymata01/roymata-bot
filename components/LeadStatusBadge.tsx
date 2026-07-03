@@ -5,7 +5,7 @@ export function LeadStatusBadge({ status }: { status: LeadStatus | null }) {
   if (!status) return null;
   const config = LEAD_STATUS_CONFIG[status];
   return (
-    <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${config.className}`}>
+    <span className={`inline-flex items-center rounded border px-1.5 py-px text-[11px] font-medium ${config.className}`}>
       {config.label}
     </span>
   );

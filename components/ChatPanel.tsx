@@ -6,9 +6,9 @@ import { StatusBadge } from "@/components/StatusBadge";
 import type { Contact, Conversation, Message } from "@/types/database";
 
 function bubbleClass(message: Message) {
-  if (message.direction === "in") return "self-start bg-[#141C2F] border border-white/10";
-  if (message.sender_type === "ai") return "self-end bg-emerald-500/15 border border-emerald-500/40";
-  return "self-end bg-orange-500/15 border border-orange-500/40";
+  if (message.direction === "in") return "self-start border border-[var(--border)] bg-[var(--surface-2)]";
+  if (message.sender_type === "ai") return "self-end border border-[#46b380]/20 bg-[#46b380]/[0.08]";
+  return "self-end border border-[var(--accent)]/25 bg-[var(--accent)]/[0.10]";
 }
 
 function senderLabel(message: Message) {
@@ -52,16 +52,16 @@ export function ChatPanel({
   const isHumanControlled = conversation.status === "atendiendo" || !conversation.ai_enabled;
 
   return (
-    <div className="flex h-full flex-col bg-[#0F1729]">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-white/10 px-5 py-3">
-        <div className="flex items-center gap-3">
+    <div className="flex h-full flex-col bg-[var(--bg)]">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] px-4 py-2.5">
+        <div className="flex items-center gap-2.5">
           {contact.avatar_url ? (
             // eslint-disable-next-line @next/next/no-img-element -- avatares vienen de un CDN externo (Instagram/Facebook)
-            <img src={contact.avatar_url} alt="" className="h-10 w-10 rounded-full border border-white/10 object-cover" />
+            <img src={contact.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover" />
           ) : null}
           <div>
-            <p className="font-bold">{contact.display_name || contact.phone || contact.external_id}</p>
-            <div className="mt-1 flex items-center gap-2">
+            <p className="text-[13px] font-semibold">{contact.display_name || contact.phone || contact.external_id}</p>
+            <div className="mt-0.5 flex items-center gap-2.5">
               <ChannelBadge channel={conversation.channel} />
               <StatusBadge status={conversation.status} />
             </div>
@@ -69,57 +69,46 @@ export function ChatPanel({
         </div>
         <div className="flex flex-wrap gap-2">
           {isHumanControlled ? (
-            <button
-              onClick={() => onUpdateConversation({ status: "con_ia", ai_enabled: true })}
-              className="rounded-lg border border-white/10 bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-600"
-            >
+            <button onClick={() => onUpdateConversation({ status: "con_ia", ai_enabled: true })} className="btn btn-primary !py-1.5">
               Reactivar IA
             </button>
           ) : (
-            <button
-              onClick={() => onUpdateConversation({ status: "atendiendo", ai_enabled: false })}
-              className="rounded-lg border border-white/10 bg-orange-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-orange-600"
-            >
+            <button onClick={() => onUpdateConversation({ status: "atendiendo", ai_enabled: false })} className="btn btn-ghost !py-1.5">
               Apagar IA y atender yo
             </button>
           )}
           {conversation.status !== "cerrada" && (
-            <button
-              onClick={() => onUpdateConversation({ status: "cerrada", ai_enabled: false })}
-              className="rounded-lg border border-white/10 bg-[#141C2F] px-3 py-1.5 text-sm font-semibold hover:bg-white/5"
-            >
+            <button onClick={() => onUpdateConversation({ status: "cerrada", ai_enabled: false })} className="btn btn-ghost !py-1.5">
               Cerrar
             </button>
           )}
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-2 overflow-y-auto p-5">
+      <div className="flex flex-1 flex-col gap-1.5 overflow-y-auto px-5 py-4">
         {messages.map((message) => (
-          <div key={message.id} className={`flex max-w-[70%] flex-col rounded-2xl px-3 py-2 ${bubbleClass(message)}`}>
+          <div key={message.id} className={`flex max-w-[65%] flex-col rounded-xl px-3 py-2 ${bubbleClass(message)}`}>
             {senderLabel(message) && (
-              <span className="mb-0.5 text-[10px] font-bold uppercase text-slate-500">{senderLabel(message)}</span>
+              <span className="mb-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-3)]">
+                {senderLabel(message)}
+              </span>
             )}
-            <p className="whitespace-pre-wrap text-sm">{message.content}</p>
+            <p className="whitespace-pre-wrap text-[13px] leading-relaxed">{message.content}</p>
           </div>
         ))}
-        {messages.length === 0 && <p className="text-sm text-slate-500">Sin mensajes todavía.</p>}
+        {messages.length === 0 && <p className="text-[13px] text-[var(--text-3)]">Sin mensajes todavía.</p>}
       </div>
 
-      <div className="border-t-2 border-white/10 p-4">
-        {sendError && <p className="mb-2 text-sm text-red-400">{sendError}</p>}
+      <div className="border-t border-[var(--border)] p-3">
+        {sendError && <p className="mb-2 text-[13px] text-[#e5484d]">{sendError}</p>}
         <form onSubmit={handleSend} className="flex gap-2">
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Escribe tu respuesta..."
-            className="flex-1 rounded-lg border border-white/10 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400"
+            className="input !py-2"
           />
-          <button
-            type="submit"
-            disabled={sending || !draft.trim()}
-            className="rounded-lg border border-orange-500/60 bg-orange-500 hover:bg-orange-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
-          >
+          <button type="submit" disabled={sending || !draft.trim()} className="btn btn-primary">
             Enviar
           </button>
         </form>

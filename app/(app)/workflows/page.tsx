@@ -97,33 +97,33 @@ export default function WorkflowsPage() {
     await load();
   }
 
-  if (loading) return <div className="p-6 text-sm text-slate-500">Cargando...</div>;
+  if (loading) return <div className="p-6 text-[13px] text-[var(--text-3)]">Cargando...</div>;
 
   return (
     <div className="h-full overflow-y-auto p-6">
       <div className="mx-auto flex max-w-3xl flex-col gap-6">
         <div>
-          <h2 className="text-xl font-bold">Workflows</h2>
-          <p className="text-sm text-slate-400">
+          <h2 className="page-title">Workflows</h2>
+          <p className="text-[13px] text-[var(--text-2)]">
             Reglas que se evalúan en cada mensaje entrante, antes de que la IA responda: si el mensaje contiene
             ciertas palabras, etiqueta, escala o marca la conversación — sin dejar que la IA improvise.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-[#141C2F] p-4">
-          <h3 className="font-bold">{editingId ? "Editar workflow" : "Nuevo workflow"}</h3>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3 card p-4">
+          <h3 className="text-[13px] font-semibold">{editingId ? "Editar workflow" : "Nuevo workflow"}</h3>
           <div className="grid grid-cols-2 gap-3">
             <input
               required
               placeholder="Nombre (ej. Detectar interés en curso)"
               value={draft.name}
               onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-              className="rounded-lg border border-white/10 px-2 py-1.5 text-sm"
+              className="input"
             />
             <select
               value={draft.channel}
               onChange={(e) => setDraft({ ...draft, channel: e.target.value as Channel | "" })}
-              className="rounded-lg border border-white/10 px-2 py-1.5 text-sm"
+              className="input"
             >
               <option value="">Cualquier canal</option>
               {CHANNELS.map((c) => (
@@ -139,14 +139,14 @@ export default function WorkflowsPage() {
             placeholder="Si el mensaje contiene (palabras separadas por coma)"
             value={draft.keywords}
             onChange={(e) => setDraft({ ...draft, keywords: e.target.value })}
-            className="rounded-lg border border-white/10 px-2 py-1.5 text-sm"
+            className="input"
           />
 
           <div className="grid grid-cols-2 gap-3">
             <select
               value={draft.actionType}
               onChange={(e) => setDraft({ ...draft, actionType: e.target.value as ActionType })}
-              className="rounded-lg border border-white/10 px-2 py-1.5 text-sm"
+              className="input"
             >
               {Object.entries(ACTION_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>
@@ -160,7 +160,7 @@ export default function WorkflowsPage() {
                 placeholder="Etiqueta a agregar (ej. interesado en curso)"
                 value={draft.tag}
                 onChange={(e) => setDraft({ ...draft, tag: e.target.value })}
-                className="rounded-lg border border-white/10 px-2 py-1.5 text-sm"
+                className="input"
               />
             ) : (
               <input
@@ -168,18 +168,18 @@ export default function WorkflowsPage() {
                 placeholder="Prioridad (mayor = se evalúa antes)"
                 value={draft.priority}
                 onChange={(e) => setDraft({ ...draft, priority: Number(e.target.value) })}
-                className="rounded-lg border border-white/10 px-2 py-1.5 text-sm"
+                className="input"
               />
             )}
           </div>
 
           <div className="flex justify-end gap-2">
             {editingId && (
-              <button type="button" onClick={resetForm} className="rounded-lg border border-white/10 px-3 py-1.5 text-sm font-semibold">
+              <button type="button" onClick={resetForm} className="btn btn-ghost">
                 Cancelar
               </button>
             )}
-            <button type="submit" className="rounded-lg border border-orange-500/60 bg-orange-500 hover:bg-orange-600 px-4 py-1.5 text-sm font-semibold text-white">
+            <button type="submit" className="btn btn-primary">
               {editingId ? "Guardar cambios" : "Crear workflow"}
             </button>
           </div>
@@ -187,36 +187,39 @@ export default function WorkflowsPage() {
 
         <div className="flex flex-col gap-3">
           {workflows.map((w) => (
-            <div key={w.id} className="rounded-2xl border border-white/10 bg-[#141C2F] p-4">
+            <div key={w.id} className="card p-4">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="font-bold">{w.name}</p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-[13px] font-semibold">{w.name}</p>
+                  <p className="text-[11px] text-[var(--text-3)]">
                     Si contiene: {(w.trigger_config.keywords ?? []).join(", ")}
                     {w.trigger_config.channel ? ` · ${w.trigger_config.channel}` : ""}
                   </p>
-                  <p className="text-xs text-slate-500">→ {ACTION_LABELS[w.action_type as ActionType]}</p>
+                  <p className="text-[11px] text-[var(--text-3)]">→ {ACTION_LABELS[w.action_type as ActionType]}</p>
                 </div>
                 <div className="flex shrink-0 gap-2">
                   <button
                     onClick={() => toggleActive(w)}
-                    className={`rounded-lg border border-white/10 px-3 py-1 text-xs font-semibold ${
-                      w.is_active ? "bg-emerald-500 text-white" : "bg-white/10"
+                    className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium ${
+                      w.is_active
+                        ? "border-[#46b380]/25 bg-[#46b380]/10 text-[#46b380]"
+                        : "border-[var(--border)] text-[var(--text-3)]"
                     }`}
                   >
+                    <span className={`h-1.5 w-1.5 rounded-full ${w.is_active ? "bg-[#46b380]" : "bg-[var(--text-3)]"}`} />
                     {w.is_active ? "Activo" : "Inactivo"}
                   </button>
-                  <button onClick={() => startEdit(w)} className="rounded-lg border border-white/10 px-3 py-1 text-xs font-semibold hover:bg-white/5">
+                  <button onClick={() => startEdit(w)} className="btn btn-ghost !px-2.5 !py-1 !text-xs">
                     Editar
                   </button>
-                  <button onClick={() => handleDelete(w.id)} className="rounded-lg border border-white/10 px-3 py-1 text-xs font-semibold text-red-400 hover:bg-red-500/10">
+                  <button onClick={() => handleDelete(w.id)} className="btn btn-danger !px-2.5 !py-1 !text-xs">
                     Borrar
                   </button>
                 </div>
               </div>
             </div>
           ))}
-          {workflows.length === 0 && <p className="text-sm text-slate-500">Todavía no tienes workflows.</p>}
+          {workflows.length === 0 && <p className="text-[13px] text-[var(--text-3)]">Todavía no tienes workflows.</p>}
         </div>
       </div>
     </div>

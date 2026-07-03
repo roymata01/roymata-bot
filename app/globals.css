@@ -1,19 +1,169 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0b1220;
-  --foreground: #e2e8f0;
+  --bg: #0c0d10;
+  --surface: #111216;
+  --surface-2: #16181d;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --text: #e7e9ec;
+  --text-2: #9ba0a8;
+  --text-3: #62676f;
+  --accent: #e8613c;
+  --accent-hover: #f07350;
+  --ok: #46b380;
+  --danger: #e5484d;
+  --warn: #f0b429;
+  --info: #4e9cf5;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-accent: var(--accent);
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 14px;
+  font-feature-settings: "cv11";
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(232, 97, 60, 0.35);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  border: 3px solid var(--bg);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---- componentes base ---- */
+
+.card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.input {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+.input::placeholder {
+  color: var(--text-3);
+}
+.input:focus {
+  border-color: var(--border-strong);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 12px;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+.btn-ghost {
+  border: 1px solid var(--border);
+  color: var(--text-2);
+}
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+}
+.btn-danger {
+  border: 1px solid var(--border);
+  color: var(--danger);
+}
+.btn-danger:hover {
+  background: rgba(229, 72, 77, 0.08);
+}
+
+.chip {
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  border: 1px solid transparent;
+  transition: background 0.12s, color 0.12s;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.chip:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+}
+.chip-on {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.label-xs {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.page-title {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.page-sub {
+  font-size: 13px;
+  color: var(--text-2);
+  margin-top: 2px;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }

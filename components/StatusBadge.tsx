@@ -4,7 +4,8 @@ import type { ConversationStatus } from "@/types/database";
 export function StatusBadge({ status }: { status: ConversationStatus }) {
   const config = STATUS_CONFIG[status];
   return (
-    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${config.className}`}>
+    <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[var(--text-2)]">
+      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: config.dot }} />
       {config.label}
     </span>
   );
