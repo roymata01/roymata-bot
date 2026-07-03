@@ -34,8 +34,9 @@ export async function ingestInboundMessage(msg: InboundMessage) {
   const contactPayload: Record<string, unknown> = {
     channel: msg.channel,
     external_id: msg.externalId,
-    last_contact_at: msg.timestamp,
   };
+  // last_contact_at es actividad del CLIENTE — un eco (respuesta nuestra) no cuenta
+  if (!msg.isEcho) contactPayload.last_contact_at = msg.timestamp;
   if (displayName) contactPayload.display_name = displayName;
   if (avatarUrl) contactPayload.avatar_url = avatarUrl;
   if (msg.channel === "whatsapp") contactPayload.phone = msg.externalId;
@@ -63,8 +64,8 @@ export async function ingestInboundMessage(msg: InboundMessage) {
       conversation_id: conversation.id,
       contact_id: contact.id,
       channel: msg.channel,
-      direction: "in",
-      sender_type: "contact",
+      direction: msg.isEcho ? "out" : "in",
+      sender_type: msg.isEcho ? "human" : "contact",
       content: msg.content,
       media_url: msg.mediaUrl,
       media_type: msg.mediaType,

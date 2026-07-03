@@ -12,6 +12,10 @@ export async function processInboundMessage(msg: InboundMessage) {
   const ingested = await ingestInboundMessage(msg);
   if (!ingested) return; // evento duplicado, ya procesado antes
 
+  // Eco: mensaje que Roy mandó desde su app de IG/Messenger — solo se guarda para
+  // que la conversación se vea completa; la IA no clasifica ni responde a lo suyo.
+  if (msg.isEcho) return;
+
   const { contact, conversation, message } = ingested;
 
   if (conversation.status !== "con_ia" || !conversation.ai_enabled) return;
