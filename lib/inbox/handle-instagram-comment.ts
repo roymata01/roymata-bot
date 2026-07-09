@@ -2,6 +2,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendInstagramPrivateReply } from "@/lib/meta/send-private-reply";
 import type { InstagramComment } from "@/lib/meta/parse-comment-webhook";
 
+// {nombre} -> @usuario de quien comentó. Los comentarios de Instagram solo traen el
+// @usuario (no el nombre real). Si Meta no lo mandó, el marcador se quita limpio
+// junto con el espacio que lo precede ("Hey {nombre}!" queda "Hey!").
+function personalizeInvite(text: string, username: string | null): string {
+  if (username) return text.replaceAll("{nombre}", `@${username}`);
+  return text.replace(/\s*\{nombre\}/g, "");
+}
+
 // Invitación por comentario: alguien comenta en un post -> se le manda UN mensaje
 // privado invitándolo a la clase de hemorragias. El eco de ese DM llega por el
 // webhook de mensajes y crea solo la conversación en la bandeja, así que la
@@ -39,7 +47,7 @@ export async function handleInstagramComment(comment: InstagramComment) {
   }
 
   try {
-    await sendInstagramPrivateReply(comment.commentId, config.comment_dm_text);
+    await sendInstagramPrivateReply(comment.commentId, personalizeInvite(config.comment_dm_text, comment.username));
     await supabase.from("comment_invites").update({ status: "sent" }).eq("id", invite.id);
   } catch (error) {
     // no se relanza: un DM fallido no debe hacer que Meta reintente el webhook

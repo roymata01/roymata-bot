@@ -4,7 +4,8 @@
 
 alter table public.assistant_settings
   add column comment_dm_enabled boolean not null default false,
-  add column comment_dm_text text not null default 'Hey! Vi tu comentario en mi publicación. Te cuento que el 1 de agosto voy a dar una clase gratis de control de hemorragias, 100% en vivo, con certificado Stop The Bleed si haces las prácticas. Regístrate aquí: https://hemorragias-vita.vercel.app/';
+  -- {nombre} se reemplaza por el @usuario de quien comentó
+  add column comment_dm_text text not null default 'Hey {nombre}! Vi tu comentario en mi publicación. Te cuento que el 1 de agosto voy a dar una clase gratis de control de hemorragias, 100% en vivo, con certificado Stop The Bleed si haces las prácticas. Regístrate aquí: https://hemorragias-vita.vercel.app/';
 
 -- Registro de a quién ya se le mandó la invitación: máximo un DM por persona,
 -- aunque comente veinte veces o en varios posts.

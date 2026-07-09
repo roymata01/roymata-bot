@@ -291,8 +291,9 @@ export default function PersonalizacionPage() {
         <EditModal title="Invitación por comentario" onClose={() => setTarget(null)} onSave={handleSave} saving={saving}>
           <p className="text-xs text-[var(--text-3)]">
             Cuando alguien comenta en una publicación tuya de Instagram, el bot le manda este mensaje privado —
-            una sola vez por persona, aunque comente varias veces. Cuando la persona responde, la conversación
-            sigue en la bandeja con la IA como cualquier chat.
+            una sola vez por persona, aunque comente varias veces. Escribe {"{nombre}"} donde quieras que aparezca
+            el @usuario de quien comentó. Cuando la persona responde, la conversación sigue en la bandeja con la
+            IA como cualquier chat.
           </p>
           <label className="flex flex-col gap-1 text-sm">
             Mensaje de invitación
