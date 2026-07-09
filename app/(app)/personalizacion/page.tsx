@@ -17,6 +17,7 @@ import {
   PowerIcon,
   ShieldIcon,
   SlidersIcon,
+  ZapIcon,
 } from "@/components/icons";
 import type { AssistantSettings, KnowledgeBaseSection } from "@/types/database";
 
@@ -31,6 +32,7 @@ const SECTION_ICONS: Record<string, React.ReactNode> = {
 type EditTarget =
   | { type: "bot_status" }
   | { type: "relevance" }
+  | { type: "comment_dm" }
   | { type: "model" }
   | { type: "keywords" }
   | { type: "off_hours" }
@@ -48,6 +50,7 @@ export default function PersonalizacionPage() {
 
   // drafts por tipo de modal
   const [draftRelevancePrompt, setDraftRelevancePrompt] = useState("");
+  const [draftCommentDm, setDraftCommentDm] = useState("");
   const [draftModel, setDraftModel] = useState("");
   const [draftMaxTokens, setDraftMaxTokens] = useState(500);
   const [draftKeywords, setDraftKeywords] = useState("");
@@ -73,6 +76,7 @@ export default function PersonalizacionPage() {
   function openEdit(t: EditTarget) {
     if (!settings) return;
     if (t?.type === "relevance") setDraftRelevancePrompt(settings.relevance_filter_prompt);
+    if (t?.type === "comment_dm") setDraftCommentDm(settings.comment_dm_text ?? "");
     if (t?.type === "model") {
       setDraftModel(settings.model);
       setDraftMaxTokens(settings.max_tokens);
@@ -105,6 +109,17 @@ export default function PersonalizacionPage() {
     setSettings({ ...settings, relevance_filter_enabled: next });
   }
 
+  async function toggleCommentDm() {
+    if (!settings) return;
+    const next = !settings.comment_dm_enabled;
+    const { error } = await supabase.from("assistant_settings").update({ comment_dm_enabled: next }).eq("id", 1);
+    if (error) {
+      alert("Falta correr la migración de la invitación por comentario en Supabase.");
+      return;
+    }
+    setSettings({ ...settings, comment_dm_enabled: next });
+  }
+
   async function toggleSectionActive(section: KnowledgeBaseSection) {
     const next = !section.is_active;
     await supabase.from("knowledge_base_sections").update({ is_active: next }).eq("id", section.id);
@@ -118,6 +133,9 @@ export default function PersonalizacionPage() {
       if (target.type === "relevance") {
         await supabase.from("assistant_settings").update({ relevance_filter_prompt: draftRelevancePrompt }).eq("id", 1);
         setSettings({ ...settings, relevance_filter_prompt: draftRelevancePrompt });
+      } else if (target.type === "comment_dm") {
+        await supabase.from("assistant_settings").update({ comment_dm_text: draftCommentDm }).eq("id", 1);
+        setSettings({ ...settings, comment_dm_text: draftCommentDm });
       } else if (target.type === "model") {
         await supabase.from("assistant_settings").update({ model: draftModel, max_tokens: draftMaxTokens }).eq("id", 1);
         setSettings({ ...settings, model: draftModel, max_tokens: draftMaxTokens });
@@ -196,6 +214,14 @@ export default function PersonalizacionPage() {
             onEdit={() => openEdit({ type: "relevance" })}
           />
           <SettingsCard
+            icon={<ZapIcon />}
+            title="Invitación por comentario"
+            preview={settings.comment_dm_text ?? "Falta correr la migración en Supabase para activar esta función."}
+            active={settings.comment_dm_enabled ?? false}
+            onToggleActive={toggleCommentDm}
+            onEdit={() => openEdit({ type: "comment_dm" })}
+          />
+          <SettingsCard
             icon={<SlidersIcon />}
             title="Modelo y respuesta"
             preview={`${settings.model} · hasta ${settings.max_tokens} tokens por respuesta`}
@@ -256,6 +282,25 @@ export default function PersonalizacionPage() {
               onChange={(e) => setDraftRelevancePrompt(e.target.value)}
               rows={8}
               className="input font-mono !text-xs"
+            />
+          </label>
+        </EditModal>
+      )}
+
+      {target?.type === "comment_dm" && (
+        <EditModal title="Invitación por comentario" onClose={() => setTarget(null)} onSave={handleSave} saving={saving}>
+          <p className="text-xs text-[var(--text-3)]">
+            Cuando alguien comenta en una publicación tuya de Instagram, el bot le manda este mensaje privado —
+            una sola vez por persona, aunque comente varias veces. Cuando la persona responde, la conversación
+            sigue en la bandeja con la IA como cualquier chat.
+          </p>
+          <label className="flex flex-col gap-1 text-sm">
+            Mensaje de invitación
+            <textarea
+              value={draftCommentDm}
+              onChange={(e) => setDraftCommentDm(e.target.value)}
+              rows={6}
+              className="input"
             />
           </label>
         </EditModal>

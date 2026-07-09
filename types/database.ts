@@ -80,7 +80,22 @@ export interface AssistantSettings {
   is_paused: boolean;
   relevance_filter_enabled: boolean;
   relevance_filter_prompt: string;
+  comment_dm_enabled: boolean;
+  comment_dm_text: string;
   updated_at: string;
+}
+
+export interface CommentInvite {
+  id: string;
+  channel: Channel;
+  comment_id: string;
+  media_id: string | null;
+  ig_user_id: string;
+  username: string | null;
+  comment_text: string | null;
+  status: "pending" | "sent" | "failed";
+  error: string | null;
+  created_at: string;
 }
 
 export interface Template {
