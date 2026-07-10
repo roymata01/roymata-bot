@@ -22,6 +22,11 @@ export async function POST(req: NextRequest) {
   const messages = parseMessagingWebhook(body, "messenger");
   const comments = parseFacebookCommentWebhook(body);
 
+  // registro temporal para diagnosticar los eventos feed de la Página
+  if (body?.object === "page" && (body.entry as Record<string, unknown>[])?.some((e) => e.changes)) {
+    console.log("feed event crudo:", JSON.stringify(body).slice(0, 1500));
+  }
+
   try {
     for (const message of messages) {
       await processInboundMessage(message);
