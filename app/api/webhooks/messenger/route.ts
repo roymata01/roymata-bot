@@ -22,9 +22,14 @@ export async function POST(req: NextRequest) {
   const messages = parseMessagingWebhook(body, "messenger");
   const comments = parseFacebookCommentWebhook(body);
 
-  // registro temporal para diagnosticar los eventos feed de la Página
+  // registro temporal para diagnosticar los eventos feed de la Página:
+  // guarda el payload crudo en la BD, que es más confiable que los logs
   if (body?.object === "page" && (body.entry as Record<string, unknown>[])?.some((e) => e.changes)) {
     console.log("feed event crudo:", JSON.stringify(body).slice(0, 1500));
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    await createAdminClient()
+      .from("processed_webhook_events")
+      .insert({ channel: "messenger", event_id: `feed_debug_${Date.now()}`, payload: body as never });
   }
 
   try {
