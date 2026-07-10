@@ -11,9 +11,12 @@ const GRAPH = "https://graph.instagram.com/v23.0";
 //
 // Límite por corrida + espaciado entre envíos: que el patrón se vea humano y no
 // dispare los sistemas anti-spam de Instagram.
-const MAX_ENVIOS_POR_CORRIDA = 10;
-const ESPACIO_ENTRE_ENVIOS_MS = 3000;
+const MAX_ENVIOS_POR_CORRIDA = 8;
+const ESPACIO_ENTRE_ENVIOS_MS = 2000;
 const DIAS_VENTANA = 7;
+// Vercel corta la función a los 60s: la barrida se detiene sola antes del corte
+// y lo que falte lo recoge la corrida del día siguiente.
+const PRESUPUESTO_MS = 40_000;
 
 async function graphGet(path: string): Promise<Record<string, unknown>> {
   const sep = path.includes("?") ? "&" : "?";
@@ -39,6 +42,7 @@ export async function sweepInstagramComments() {
   const comentariosVistos = new Set((invitados ?? []).map((i) => i.comment_id));
   const usuariosInvitados = new Set((invitados ?? []).map((i) => i.ig_user_id));
 
+  const inicio = Date.now();
   const corte = Date.now() - DIAS_VENTANA * 24 * 60 * 60 * 1000;
   const media = (await graphGet("/me/media?fields=id,timestamp&limit=25")) as {
     data: { id: string; timestamp: string }[];
@@ -48,14 +52,14 @@ export async function sweepInstagramComments() {
   let enviados = 0;
 
   for (const m of media.data ?? []) {
-    if (enviados >= MAX_ENVIOS_POR_CORRIDA) break;
+    if (enviados >= MAX_ENVIOS_POR_CORRIDA || Date.now() - inicio > PRESUPUESTO_MS) break;
 
     const comments = (await graphGet(`/${m.id}/comments?fields=id,from,text,timestamp&limit=50`)) as {
       data: { id: string; from?: { id: string; username?: string }; text?: string; timestamp: string }[];
     };
 
     for (const c of comments.data ?? []) {
-      if (enviados >= MAX_ENVIOS_POR_CORRIDA) break;
+      if (enviados >= MAX_ENVIOS_POR_CORRIDA || Date.now() - inicio > PRESUPUESTO_MS) break;
       if (new Date(c.timestamp).getTime() < corte) continue;
       revisados++;
 
