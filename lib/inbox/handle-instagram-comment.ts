@@ -46,8 +46,15 @@ export async function handleInstagramComment(comment: InstagramComment) {
     throw insertError;
   }
 
+  const texto = personalizeInvite(config.comment_dm_text, comment.username);
   try {
-    await sendInstagramPrivateReply(comment.commentId, personalizeInvite(config.comment_dm_text, comment.username));
+    try {
+      await sendInstagramPrivateReply(comment.commentId, texto);
+    } catch {
+      // Meta a veces responde 500 transitorio; un solo reintento lo suele salvar
+      await new Promise((r) => setTimeout(r, 3000));
+      await sendInstagramPrivateReply(comment.commentId, texto);
+    }
     await supabase.from("comment_invites").update({ status: "sent" }).eq("id", invite.id);
   } catch (error) {
     // no se relanza: un DM fallido no debe hacer que Meta reintente el webhook
