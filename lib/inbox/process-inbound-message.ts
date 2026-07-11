@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ingestInboundMessage } from "@/lib/inbox/ingest-inbound-message";
+import { sendInviteFollowUpIfFirstReply } from "@/lib/inbox/send-invite-follow-up";
 import { checkEscalation } from "@/lib/ai/check-escalation";
 import { classifyMessage } from "@/lib/ai/classify-message";
 import { escalateConversation } from "@/lib/ai/escalate-conversation";
@@ -24,6 +25,11 @@ export async function processInboundMessage(msg: InboundMessage) {
   // esté pausada la IA o no — son seguridad/organización, no "la IA hablando".
   const escalatedByKeyword = await checkEscalation(conversation.id, msg.content);
   if (escalatedByKeyword) return;
+
+  // Primera respuesta a la invitación por comentario -> seguimiento fijo
+  // ("Holaa" + pregunta de registro), sin clasificador. Luego sigue la IA normal.
+  const followedUp = await sendInviteFollowUpIfFirstReply(conversation.id, msg.channel, contact.id, msg.externalId);
+  if (followedUp) return;
 
   const { blockAiReply } = await runWorkflows({
     conversationId: conversation.id,
