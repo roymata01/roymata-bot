@@ -98,6 +98,17 @@ export function FlaskIcon(p: IconProps) {
   );
 }
 
+export function ClipboardIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <rect x="5" y="4" width="14" height="17" rx="2" />
+      <path d="M9 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" />
+      <path d="M9 11h6" />
+      <path d="M9 15h4" />
+    </Svg>
+  );
+}
+
 export function DollarIcon(p: IconProps) {
   return (
     <Svg {...p}>

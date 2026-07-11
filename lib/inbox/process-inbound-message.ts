@@ -3,6 +3,7 @@ import { ingestInboundMessage } from "@/lib/inbox/ingest-inbound-message";
 import { sendInviteFollowUpIfFirstReply } from "@/lib/inbox/send-invite-follow-up";
 import { checkEscalation } from "@/lib/ai/check-escalation";
 import { classifyMessage } from "@/lib/ai/classify-message";
+import { maybeCaptureQuoteRequest } from "@/lib/ai/extract-quote";
 import { escalateConversation } from "@/lib/ai/escalate-conversation";
 import { generateAiReply } from "@/lib/ai/generate-reply";
 import { sendForChannel } from "@/lib/meta/send-message";
@@ -46,6 +47,11 @@ export async function processInboundMessage(msg: InboundMessage) {
     return;
   }
   if (category === "personal") return; // la IA no se mete, Roy contesta si quiere
+
+  // Cotizaciones grupales (empresa/escuela): detecta y junta los datos del
+  // cliente en quote_requests para el apartado "Cotizaciones" del panel.
+  // Nunca lanza — un fallo aquí no frena la respuesta.
+  await maybeCaptureQuoteRequest(conversation.id, contact.id, msg.content);
 
   const supabaseCheck = createAdminClient();
   const { data: settings } = await supabaseCheck

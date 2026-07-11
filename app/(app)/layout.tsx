@@ -3,6 +3,7 @@ import { SignOutButton } from "@/components/SignOutButton";
 import { NavLink } from "@/components/NavLink";
 import {
   ChartIcon,
+  ClipboardIcon,
   DocIcon,
   DollarIcon,
   FlaskIcon,
@@ -39,6 +40,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <NavLink href="/resumen" icon={<ChartIcon />}>Resumen</NavLink>
           <NavLink href="/inbox" icon={<InboxIcon />}>Conversaciones</NavLink>
           <NavLink href="/crm" icon={<UsersIcon />}>CRM</NavLink>
+          <NavLink href="/cotizaciones" icon={<ClipboardIcon />}>Cotizaciones</NavLink>
           <p className="label-xs px-2.5 pb-1.5 pt-4">Automatización</p>
           <NavLink href="/templates" icon={<DocIcon />}>Templates</NavLink>
           <NavLink href="/workflows" icon={<ZapIcon />}>Workflows</NavLink>

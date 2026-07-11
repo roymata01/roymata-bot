@@ -85,6 +85,22 @@ export interface AssistantSettings {
   updated_at: string;
 }
 
+export interface QuoteRequest {
+  id: string;
+  conversation_id: string;
+  contact_id: string;
+  nombre: string | null;
+  organizacion: string | null;
+  num_personas: number | null;
+  correo: string | null;
+  telefono: string | null;
+  notas: string | null;
+  status: "pendiente" | "atendida";
+  created_at: string;
+  updated_at: string;
+  contact?: Contact;
+}
+
 export interface CommentInvite {
   id: string;
   channel: Channel;
