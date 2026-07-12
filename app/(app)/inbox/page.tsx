@@ -23,6 +23,13 @@ export default function InboxPage() {
   const [aiFilter, setAiFilter] = useState<AiFilter>("all");
   const [answeredConversationIds, setAnsweredConversationIds] = useState<Set<string>>(new Set());
 
+  // permite llegar con /inbox?c=<id> desde otras pantallas (ej. Cotizaciones)
+  useEffect(() => {
+    const c = new URLSearchParams(window.location.search).get("c");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- lectura única del query param al montar
+    if (c) setSelectedId(c);
+  }, []);
+
   const loadConversations = useCallback(async () => {
     const { data } = await supabase
       .from("conversations")

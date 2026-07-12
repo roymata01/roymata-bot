@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { ChannelBadge } from "@/components/ChannelBadge";
 import type { QuoteRequest } from "@/types/database";
@@ -13,6 +14,7 @@ const CAMPOS: { key: keyof QuoteRequest; label: string }[] = [
 ];
 
 export default function CotizacionesPage() {
+  const router = useRouter();
   const supabase = useMemo(() => createBrowserSupabaseClient(), []);
   const [quotes, setQuotes] = useState<QuoteRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,7 +70,12 @@ export default function CotizacionesPage() {
 
         <div className="flex flex-col gap-3">
           {visibles.map((q) => (
-            <div key={q.id} className="card p-4">
+            <div
+              key={q.id}
+              onClick={() => router.push(`/inbox?c=${q.conversation_id}`)}
+              className="card cursor-pointer p-4 transition hover:border-white/20"
+              title="Ver conversación"
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex flex-col gap-0.5">
                   <div className="flex items-center gap-2">
@@ -83,7 +90,10 @@ export default function CotizacionesPage() {
                   </p>
                 </div>
                 <button
-                  onClick={() => toggleStatus(q)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleStatus(q);
+                  }}
                   className={`inline-flex shrink-0 items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium ${
                     q.status === "pendiente"
                       ? "border-[#f0b429]/25 bg-[#f0b429]/10 text-[#f0b429]"
