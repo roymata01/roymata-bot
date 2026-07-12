@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { nombreDesdeUsername } from "@/lib/ai/name-from-username";
+import { nombreDelContacto, typoEnNombre } from "@/lib/inbox/nombre-saludo";
 import { sendForChannel } from "@/lib/meta/send-message";
 import type { Channel } from "@/types/database";
 
@@ -34,12 +34,7 @@ export async function sendKeywordReplyIfMatch(
 
   // Saludo por nombre: del display_name real (Facebook) o extraído del
   // @usuario con IA (Instagram) — nunca el username crudo (regla de Roy).
-  const { data: contacto } = await supabase.from("contacts").select("display_name").eq("id", contactId).single();
-  let nombre: string | null = null;
-  const dn = contacto?.display_name?.trim() ?? null;
-  if (dn && !/^\d+$/.test(dn)) {
-    nombre = dn.startsWith("@") ? await nombreDesdeUsername(dn.slice(1)) : dn.split(/\s+/)[0];
-  }
+  const nombre = await nombreDelContacto(contactId);
 
   // ~1 de cada 5, con nombre: falta de dedo en el saludo + corrección con humor
   const burbujas: string[] = [];
@@ -80,11 +75,4 @@ export async function sendKeywordReplyIfMatch(
   }
 
   return true;
-}
-
-// falta de dedo creíble: intercambia dos letras vecinas del nombre
-// ("Eduardo" -> "Edaurdo", "Roy" -> "Ryo")
-function typoEnNombre(nombre: string): string {
-  const i = 1 + Math.floor(Math.random() * (nombre.length - 2));
-  return nombre.slice(0, i) + nombre[i + 1] + nombre[i] + nombre.slice(i + 2);
 }

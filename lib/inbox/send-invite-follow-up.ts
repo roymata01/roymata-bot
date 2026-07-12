@@ -1,12 +1,14 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { nombreDelContacto, typoEnNombre } from "@/lib/inbox/nombre-saludo";
 import { sendForChannel } from "@/lib/meta/send-message";
 import type { Channel } from "@/types/database";
 
 // Seguimiento fijo de la invitación por comentario (diseño de Roy): a la PRIMERA
-// respuesta de la persona, el bot contesta siempre con dos mensajes — "Holaa" y
+// respuesta de la persona, el bot contesta siempre con dos mensajes — "Holaa"
+// (con nombre si lo hay, y ~1 de cada 5 con falta de dedo que se corrige) y
 // luego la pregunta de registro — sin pasar por el clasificador (que callaba los
 // "Gracias"/"👍"). De ahí en adelante la conversación sigue con la IA normal.
-const MENSAJES_SEGUIMIENTO = ["Holaa", "Pudiste registrarte? Si tienes dudas escríbeme con confianza"];
+const PREGUNTA_SEGUIMIENTO = "Pudiste registrarte? Si tienes dudas escríbeme con confianza";
 
 // La invitación se reconoce por llevar el link de registro y venir del bot
 // (sender_user_id null = no fue enviada a mano desde el panel).
@@ -43,7 +45,17 @@ export async function sendInviteFollowUpIfFirstReply(
   const botYaRespondio = mensajes.slice(idxInvitacion + 1).some((m) => m.direction === "out");
   if (botYaRespondio) return false;
 
-  for (const texto of MENSAJES_SEGUIMIENTO) {
+  const nombre = await nombreDelContacto(contactId);
+  let burbujas: string[];
+  if (nombre && nombre.length >= 3 && Math.random() < 0.2) {
+    burbujas = [`Holaa ${typoEnNombre(nombre)}`, `Perdon, ${nombre} jaja. ${PREGUNTA_SEGUIMIENTO}`];
+  } else if (nombre) {
+    burbujas = [`Holaa ${nombre}`, PREGUNTA_SEGUIMIENTO];
+  } else {
+    burbujas = ["Holaa", PREGUNTA_SEGUIMIENTO];
+  }
+
+  for (const texto of burbujas) {
     const { data: mensaje, error: insertError } = await supabase
       .from("messages")
       .insert({
