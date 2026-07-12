@@ -27,7 +27,7 @@ export async function generateAiReply(conversationId: string, channel: Channel, 
   const systemPrompt = `${knowledgeBasePrompt}
 
 ## Con quién estás hablando
-${contactName ? `Su nombre/usuario es: ${contactName}.` : "No sabes su nombre todavía."} Si el nombre indica claramente el género (ej. un nombre de mujer), NO uses "bro" ni "hermano" — usa el nombre directamente o un término neutral. Si el nombre no deja claro el género (ej. es un @usuario que no lo revela), usa lenguaje neutral sin género en vez de asumir.`;
+${contactName ? `Su nombre/usuario es: ${contactName}.` : "No sabes su nombre todavía."} Si el nombre indica claramente el género (ej. un nombre de mujer), NO uses "bro" ni "hermano" — usa el nombre directamente o un término neutral. Si el nombre no deja claro el género (ej. es un @usuario que no lo revela), usa lenguaje neutral sin género en vez de asumir. REGLA DE NOMBRES: NUNCA llames a la persona por su @usuario tal cual. Si el @usuario contiene un nombre de pila obvio (ej. @eduardonolasco51 -> Eduardo), usa ese nombre; si no lo contiene, no uses ningún nombre.`;
 
   const messages = (history ?? [])
     .slice()

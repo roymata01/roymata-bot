@@ -1,12 +1,14 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { nombreDesdeUsername } from "@/lib/ai/name-from-username";
 import { sendInstagramPrivateReply } from "@/lib/meta/send-private-reply";
 import type { InstagramComment } from "@/lib/meta/parse-comment-webhook";
 
-// {nombre} -> @usuario de quien comentó. Los comentarios de Instagram solo traen el
-// @usuario (no el nombre real). Si Meta no lo mandó, el marcador se quita limpio
-// junto con el espacio que lo precede ("Hey {nombre}!" queda "Hey!").
-function personalizeInvite(text: string, username: string | null): string {
-  if (username) return text.replaceAll("{nombre}", `@${username}`);
+// {nombre} -> nombre humano extraído del @usuario con IA ("eduardonolasco51" ->
+// "Eduardo"). Si el username no trae nombre reconocible, el marcador se quita
+// limpio junto con el espacio que lo precede ("Hey {nombre}!" queda "Hey!") —
+// regla de Roy: nunca saludar con el username crudo.
+function personalizeInvite(text: string, nombre: string | null): string {
+  if (nombre) return text.replaceAll("{nombre}", nombre);
   return text.replace(/\s*\{nombre\}/g, "");
 }
 
@@ -46,7 +48,8 @@ export async function handleInstagramComment(comment: InstagramComment) {
     throw insertError;
   }
 
-  const texto = personalizeInvite(config.comment_dm_text, comment.username);
+  const nombre = comment.username ? await nombreDesdeUsername(comment.username) : null;
+  const texto = personalizeInvite(config.comment_dm_text, nombre);
   try {
     let resultado;
     try {
