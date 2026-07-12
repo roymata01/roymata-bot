@@ -55,7 +55,7 @@ export async function sendInviteFollowUpIfFirstReply(
     burbujas = ["Holaa", PREGUNTA_SEGUIMIENTO];
   }
 
-  for (const texto of burbujas) {
+  for (const [i, texto] of burbujas.entries()) {
     const { data: mensaje, error: insertError } = await supabase
       .from("messages")
       .insert({
@@ -79,8 +79,8 @@ export async function sendInviteFollowUpIfFirstReply(
       return true; // no intentar el segundo si el primero falló
     }
 
-    // pausa breve para que lleguen como dos burbujas separadas y en orden
-    await new Promise((r) => setTimeout(r, 1500));
+    // pausa larga entre burbujas (pedido de Roy): como si estuviera tecleando
+    if (i < burbujas.length - 1) await new Promise((r) => setTimeout(r, 20_000));
   }
 
   return true;

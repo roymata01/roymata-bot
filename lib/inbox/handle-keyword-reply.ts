@@ -71,7 +71,8 @@ export async function sendKeywordReplyIfMatch(
       await supabase.from("messages").update({ status: "failed" }).eq("id", mensaje.id);
       break; // si falla una burbuja, no mandar las siguientes fuera de orden
     }
-    if (i < burbujas.length - 1) await new Promise((r) => setTimeout(r, 1800));
+    // pausa larga entre burbujas (pedido de Roy): como si estuviera tecleando
+    if (i < burbujas.length - 1) await new Promise((r) => setTimeout(r, 20_000));
   }
 
   return true;

@@ -28,8 +28,12 @@ export async function processInboundMessage(msg: InboundMessage) {
   const escalatedByKeyword = await checkEscalation(conversation.id, msg.content);
   if (escalatedByKeyword) return;
 
-  // Palabra clave ("responde CURSO a esta historia") -> link de registro al
-  // instante, determinista. Va antes del seguimiento: si responden "curso" a la
+  // Pausa humana antes de cualquier respuesta automática: nadie contesta en 1
+  // segundo. La escalación de emergencias ya corrió (esa sí es instantánea).
+  await new Promise((r) => setTimeout(r, 8000 + Math.random() * 7000));
+
+  // Palabra clave ("responde CURSO a esta historia") -> link de registro,
+  // determinista. Va antes del seguimiento: si responden "curso" a la
   // invitación, el link es mejor respuesta que el "Holaa".
   const keywordMatched = await sendKeywordReplyIfMatch(conversation.id, msg.channel, contact.id, msg.externalId, msg.content);
   if (keywordMatched) return;
@@ -81,7 +85,7 @@ export async function processInboundMessage(msg: InboundMessage) {
       await supabase.from("messages").update({ status: "failed" }).eq("id", mensaje.messageId);
       break; // si falla uno, no mandar los siguientes fuera de orden
     }
-    // pausa corta entre burbujas para que lleguen en orden y se sienta humano
-    if (i < mensajes.length - 1) await new Promise((r) => setTimeout(r, 1800));
+    // pausa larga entre burbujas (pedido de Roy): como si estuviera tecleando
+    if (i < mensajes.length - 1) await new Promise((r) => setTimeout(r, 20_000));
   }
 }
