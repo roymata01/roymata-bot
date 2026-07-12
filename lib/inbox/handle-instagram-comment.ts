@@ -1,5 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { nombreDesdeUsername } from "@/lib/ai/name-from-username";
+import { conRef } from "@/lib/meta/link-ref";
+import { replyToInstagramComment, respuestaPublicaAleatoria } from "@/lib/meta/reply-to-comment";
 import { sendInstagramPrivateReply } from "@/lib/meta/send-private-reply";
 import type { InstagramComment } from "@/lib/meta/parse-comment-webhook";
 
@@ -49,7 +51,9 @@ export async function handleInstagramComment(comment: InstagramComment) {
   }
 
   const nombre = comment.username ? await nombreDesdeUsername(comment.username) : null;
-  const texto = personalizeInvite(config.comment_dm_text, nombre);
+  // el link lleva el ref de la invitación: si esta persona se registra, el
+  // registro queda ligado a este DM (atribución del bot)
+  const texto = conRef(personalizeInvite(config.comment_dm_text, nombre), `ci_${invite.id}`);
   try {
     let resultado;
     try {
@@ -62,14 +66,39 @@ export async function handleInstagramComment(comment: InstagramComment) {
     await supabase.from("comment_invites").update({ status: "sent" }).eq("id", invite.id);
 
     // Guarda el contacto ya con su @usuario (la respuesta trae el IGSID de
-    // mensajería) — así la bandeja muestra nombre desde el primer momento.
-    if (resultado.recipientId && comment.username) {
-      await supabase
+    // mensajería) — así la bandeja muestra nombre desde el primer momento — y
+    // liga la invitación a su conversación (para el rastreo de registros).
+    if (resultado.recipientId) {
+      const { data: contacto } = await supabase
         .from("contacts")
         .upsert(
-          { channel: "instagram", external_id: resultado.recipientId, display_name: `@${comment.username}` },
+          {
+            channel: "instagram",
+            external_id: resultado.recipientId,
+            ...(comment.username ? { display_name: `@${comment.username}` } : {}),
+          },
           { onConflict: "channel,external_id" }
-        );
+        )
+        .select()
+        .single();
+      if (contacto) {
+        const { data: conversacion } = await supabase
+          .from("conversations")
+          .upsert({ contact_id: contacto.id, channel: "instagram" }, { onConflict: "contact_id,channel" })
+          .select()
+          .single();
+        if (conversacion) {
+          await supabase.from("comment_invites").update({ conversation_id: conversacion.id }).eq("id", invite.id);
+        }
+      }
+    }
+
+    // Respuesta pública al comentario: manda a la persona a su bandeja y les
+    // enseña a los demás que comentando reciben algo. Si falla, no pasa nada.
+    try {
+      await replyToInstagramComment(comment.commentId, respuestaPublicaAleatoria());
+    } catch (error) {
+      console.error("Error en respuesta pública de Instagram:", error);
     }
   } catch (error) {
     // no se relanza: un DM fallido no debe hacer que Meta reintente el webhook

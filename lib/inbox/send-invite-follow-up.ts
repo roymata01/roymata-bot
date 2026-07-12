@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { conversacionYaRegistrada } from "@/lib/inbox/check-registration";
 import { nombreDelContacto, typoEnNombre } from "@/lib/inbox/nombre-saludo";
 import { sendForChannel } from "@/lib/meta/send-message";
 import { sendMessengerLinkCard } from "@/lib/meta/send-messenger-card";
@@ -47,13 +48,21 @@ export async function sendInviteFollowUpIfFirstReply(
   if (botYaRespondio) return false;
 
   const nombre = await nombreDelContacto(contactId);
+
+  // Si su registro ya cayó en la página (rastreado por el ref del link), no
+  // tiene sentido preguntarle si pudo — se le felicita y se le da certeza.
+  const yaRegistrado = await conversacionYaRegistrada(conversationId);
+  const segundoMensaje = yaRegistrado
+    ? "Vi que ya te registraste 🙌 revisa tu correo, ahí te llegó la confirmación. Nos vemos el 1 de agosto!"
+    : PREGUNTA_SEGUIMIENTO;
+
   let burbujas: string[];
   if (nombre && nombre.length >= 3 && Math.random() < 0.2) {
-    burbujas = [`Holaa ${typoEnNombre(nombre)}`, `Perdon, ${nombre} jaja. ${PREGUNTA_SEGUIMIENTO}`];
+    burbujas = [`Holaa ${typoEnNombre(nombre)}`, `Perdon, ${nombre} jaja. ${segundoMensaje}`];
   } else if (nombre) {
-    burbujas = [`Holaa ${nombre}`, PREGUNTA_SEGUIMIENTO];
+    burbujas = [`Holaa ${nombre}`, segundoMensaje];
   } else {
-    burbujas = ["Holaa", PREGUNTA_SEGUIMIENTO];
+    burbujas = ["Holaa", segundoMensaje];
   }
 
   for (const [i, texto] of burbujas.entries()) {

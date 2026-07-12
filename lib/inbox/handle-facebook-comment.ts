@@ -1,4 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { conRef } from "@/lib/meta/link-ref";
+import { replyToFacebookComment, respuestaPublicaAleatoria } from "@/lib/meta/reply-to-comment";
 import { sendMessengerPrivateReply } from "@/lib/meta/send-private-reply";
 import type { FacebookComment } from "@/lib/meta/parse-feed-comment-webhook";
 
@@ -42,7 +44,9 @@ export async function handleFacebookComment(comment: FacebookComment) {
     throw insertError;
   }
 
-  const texto = personalizeInvite(config.comment_dm_text, comment.userName);
+  // el link lleva el ref de la invitación: si esta persona se registra, el
+  // registro queda ligado a este DM (atribución del bot)
+  const texto = conRef(personalizeInvite(config.comment_dm_text, comment.userName), `ci_${invite.id}`);
   try {
     let resultado;
     try {
@@ -57,13 +61,37 @@ export async function handleFacebookComment(comment: FacebookComment) {
     // La API de perfiles de Messenger está bloqueada sin revisión de Meta, pero
     // aquí tenemos el nombre real (del comentario) y el PSID (de la respuesta):
     // se guarda el contacto ya con nombre para que la bandeja no muestre números.
-    if (resultado.recipientId && comment.userName) {
-      await supabase
+    if (resultado.recipientId) {
+      const { data: contacto } = await supabase
         .from("contacts")
         .upsert(
-          { channel: "messenger", external_id: resultado.recipientId, display_name: comment.userName },
+          {
+            channel: "messenger",
+            external_id: resultado.recipientId,
+            ...(comment.userName ? { display_name: comment.userName } : {}),
+          },
           { onConflict: "channel,external_id" }
-        );
+        )
+        .select()
+        .single();
+      if (contacto) {
+        const { data: conversacion } = await supabase
+          .from("conversations")
+          .upsert({ contact_id: contacto.id, channel: "messenger" }, { onConflict: "contact_id,channel" })
+          .select()
+          .single();
+        if (conversacion) {
+          await supabase.from("comment_invites").update({ conversation_id: conversacion.id }).eq("id", invite.id);
+        }
+      }
+    }
+
+    // Respuesta pública al comentario (requiere pages_manage_engagement en el
+    // token — si aún no está, falla silencioso y el DM ya salió igual).
+    try {
+      await replyToFacebookComment(comment.commentId, respuestaPublicaAleatoria());
+    } catch (error) {
+      console.error("Error en respuesta pública de Facebook:", error);
     }
   } catch (error) {
     // no se relanza: un DM fallido no debe hacer que Meta reintente el webhook

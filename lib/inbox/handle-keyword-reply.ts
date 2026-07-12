@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { conRef } from "@/lib/meta/link-ref";
 import { nombreDelContacto, typoEnNombre } from "@/lib/inbox/nombre-saludo";
 import { sendForChannel } from "@/lib/meta/send-message";
 import { sendMessengerLinkCard } from "@/lib/meta/send-messenger-card";
@@ -37,16 +38,19 @@ export async function sendKeywordReplyIfMatch(
   // @usuario con IA (Instagram) — nunca el username crudo (regla de Roy).
   const nombre = await nombreDelContacto(contactId);
 
+  // el link lleva el ref de la conversación (atribución de registros del bot)
+  const respuesta = conRef(config.keyword_reply, conversationId);
+
   // ~1 de cada 5, con nombre: falta de dedo en el saludo + corrección con humor
   const burbujas: string[] = [];
   if (nombre && nombre.length >= 3 && Math.random() < 0.2) {
     burbujas.push(`Hola ${typoEnNombre(nombre)}`);
-    burbujas.push(`Perdon, ${nombre} jaja. ${config.keyword_reply}`);
+    burbujas.push(`Perdon, ${nombre} jaja. ${respuesta}`);
   } else if (nombre) {
     burbujas.push(`Hola ${nombre}!`);
-    burbujas.push(config.keyword_reply);
+    burbujas.push(respuesta);
   } else {
-    burbujas.push(config.keyword_reply);
+    burbujas.push(respuesta);
   }
 
   for (const [i, texto] of burbujas.entries()) {
