@@ -28,19 +28,20 @@ export async function sendInviteFollowUpIfFirstReply(
     .limit(100);
 
   const mensajes = history ?? [];
-  const hayInvitacion = mensajes.some(
+  const idxInvitacion = mensajes.findLastIndex(
     (m) =>
       m.direction === "out" &&
       m.sender_type === "human" &&
       !m.sender_user_id &&
       (m.content ?? "").includes(LINK_REGISTRO)
   );
-  if (!hayInvitacion) return false;
+  if (idxInvitacion === -1) return false;
 
-  const seguimientoYaEnviado = mensajes.some(
-    (m) => m.direction === "out" && (m.content ?? "").includes("Pudiste registrarte")
-  );
-  if (seguimientoYaEnviado) return false;
+  // Solo es "primera respuesta" si el bot no ha dicho NADA después de la
+  // invitación — si ya hubo respuesta de IA, seguimiento o palabra clave,
+  // la conversación ya está andando y esto no aplica.
+  const botYaRespondio = mensajes.slice(idxInvitacion + 1).some((m) => m.direction === "out");
+  if (botYaRespondio) return false;
 
   for (const texto of MENSAJES_SEGUIMIENTO) {
     const { data: mensaje, error: insertError } = await supabase
