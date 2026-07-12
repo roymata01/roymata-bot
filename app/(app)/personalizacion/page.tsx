@@ -33,6 +33,7 @@ type EditTarget =
   | { type: "bot_status" }
   | { type: "relevance" }
   | { type: "comment_dm" }
+  | { type: "keyword" }
   | { type: "model" }
   | { type: "keywords" }
   | { type: "off_hours" }
@@ -51,6 +52,8 @@ export default function PersonalizacionPage() {
   // drafts por tipo de modal
   const [draftRelevancePrompt, setDraftRelevancePrompt] = useState("");
   const [draftCommentDm, setDraftCommentDm] = useState("");
+  const [draftKeywordTrigger, setDraftKeywordTrigger] = useState("");
+  const [draftKeywordReply, setDraftKeywordReply] = useState("");
   const [draftModel, setDraftModel] = useState("");
   const [draftMaxTokens, setDraftMaxTokens] = useState(500);
   const [draftKeywords, setDraftKeywords] = useState("");
@@ -77,6 +80,10 @@ export default function PersonalizacionPage() {
     if (!settings) return;
     if (t?.type === "relevance") setDraftRelevancePrompt(settings.relevance_filter_prompt);
     if (t?.type === "comment_dm") setDraftCommentDm(settings.comment_dm_text ?? "");
+    if (t?.type === "keyword") {
+      setDraftKeywordTrigger(settings.keyword_trigger ?? "curso");
+      setDraftKeywordReply(settings.keyword_reply ?? "");
+    }
     if (t?.type === "model") {
       setDraftModel(settings.model);
       setDraftMaxTokens(settings.max_tokens);
@@ -136,6 +143,12 @@ export default function PersonalizacionPage() {
       } else if (target.type === "comment_dm") {
         await supabase.from("assistant_settings").update({ comment_dm_text: draftCommentDm }).eq("id", 1);
         setSettings({ ...settings, comment_dm_text: draftCommentDm });
+      } else if (target.type === "keyword") {
+        await supabase
+          .from("assistant_settings")
+          .update({ keyword_trigger: draftKeywordTrigger.trim(), keyword_reply: draftKeywordReply })
+          .eq("id", 1);
+        setSettings({ ...settings, keyword_trigger: draftKeywordTrigger.trim(), keyword_reply: draftKeywordReply });
       } else if (target.type === "model") {
         await supabase.from("assistant_settings").update({ model: draftModel, max_tokens: draftMaxTokens }).eq("id", 1);
         setSettings({ ...settings, model: draftModel, max_tokens: draftMaxTokens });
@@ -222,6 +235,12 @@ export default function PersonalizacionPage() {
             onEdit={() => openEdit({ type: "comment_dm" })}
           />
           <SettingsCard
+            icon={<ChatIcon />}
+            title={`Palabra clave "${settings.keyword_trigger ?? "curso"}"`}
+            preview={settings.keyword_reply ?? "Falta correr la migración en Supabase para activar esta función."}
+            onEdit={() => openEdit({ type: "keyword" })}
+          />
+          <SettingsCard
             icon={<SlidersIcon />}
             title="Modelo y respuesta"
             preview={`${settings.model} · hasta ${settings.max_tokens} tokens por respuesta`}
@@ -301,6 +320,32 @@ export default function PersonalizacionPage() {
               value={draftCommentDm}
               onChange={(e) => setDraftCommentDm(e.target.value)}
               rows={6}
+              className="input"
+            />
+          </label>
+        </EditModal>
+      )}
+
+      {target?.type === "keyword" && (
+        <EditModal title="Palabra clave" onClose={() => setTarget(null)} onSave={handleSave} saving={saving}>
+          <p className="text-xs text-[var(--text-3)]">
+            Si alguien manda exactamente esta palabra (respondiendo una historia o en DM), el bot contesta al
+            instante con este mensaje — sin pasar por la IA. Ideal para historias tipo &quot;responde CURSO&quot;.
+          </p>
+          <label className="flex flex-col gap-1 text-sm">
+            Palabra clave
+            <input
+              value={draftKeywordTrigger}
+              onChange={(e) => setDraftKeywordTrigger(e.target.value)}
+              className="input"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            Respuesta
+            <textarea
+              value={draftKeywordReply}
+              onChange={(e) => setDraftKeywordReply(e.target.value)}
+              rows={5}
               className="input"
             />
           </label>

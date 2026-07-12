@@ -82,6 +82,8 @@ export interface AssistantSettings {
   relevance_filter_prompt: string;
   comment_dm_enabled: boolean;
   comment_dm_text: string;
+  keyword_trigger: string;
+  keyword_reply: string;
   updated_at: string;
 }
 
