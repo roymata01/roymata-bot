@@ -68,15 +68,20 @@ export async function processInboundMessage(msg: InboundMessage) {
     .single();
   if (settings?.is_paused) return; // apagado de emergencia: guarda el mensaje, no genera ni envía respuesta
 
-  const { messageId, replyText } = await generateAiReply(conversation.id, msg.channel, contact.id);
-  if (!replyText) return;
+  const { mensajes, replyText } = await generateAiReply(conversation.id, msg.channel, contact.id);
+  if (!replyText || mensajes.length === 0) return;
 
   const supabase = createAdminClient();
-  try {
-    const metaMessageId = await sendForChannel(msg.channel, msg.externalId, replyText);
-    await supabase.from("messages").update({ status: "sent", meta_message_id: metaMessageId }).eq("id", messageId);
-  } catch (error) {
-    console.error(`Error enviando respuesta de IA por ${msg.channel}:`, error);
-    await supabase.from("messages").update({ status: "failed" }).eq("id", messageId);
+  for (const [i, mensaje] of mensajes.entries()) {
+    try {
+      const metaMessageId = await sendForChannel(msg.channel, msg.externalId, mensaje.text);
+      await supabase.from("messages").update({ status: "sent", meta_message_id: metaMessageId }).eq("id", mensaje.messageId);
+    } catch (error) {
+      console.error(`Error enviando respuesta de IA por ${msg.channel}:`, error);
+      await supabase.from("messages").update({ status: "failed" }).eq("id", mensaje.messageId);
+      break; // si falla uno, no mandar los siguientes fuera de orden
+    }
+    // pausa corta entre burbujas para que lleguen en orden y se sienta humano
+    if (i < mensajes.length - 1) await new Promise((r) => setTimeout(r, 1800));
   }
 }
