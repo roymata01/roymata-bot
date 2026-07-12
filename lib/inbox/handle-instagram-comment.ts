@@ -48,14 +48,26 @@ export async function handleInstagramComment(comment: InstagramComment) {
 
   const texto = personalizeInvite(config.comment_dm_text, comment.username);
   try {
+    let resultado;
     try {
-      await sendInstagramPrivateReply(comment.commentId, texto);
+      resultado = await sendInstagramPrivateReply(comment.commentId, texto);
     } catch {
       // Meta a veces responde 500 transitorio; un solo reintento lo suele salvar
       await new Promise((r) => setTimeout(r, 3000));
-      await sendInstagramPrivateReply(comment.commentId, texto);
+      resultado = await sendInstagramPrivateReply(comment.commentId, texto);
     }
     await supabase.from("comment_invites").update({ status: "sent" }).eq("id", invite.id);
+
+    // Guarda el contacto ya con su @usuario (la respuesta trae el IGSID de
+    // mensajería) — así la bandeja muestra nombre desde el primer momento.
+    if (resultado.recipientId && comment.username) {
+      await supabase
+        .from("contacts")
+        .upsert(
+          { channel: "instagram", external_id: resultado.recipientId, display_name: `@${comment.username}` },
+          { onConflict: "channel,external_id" }
+        );
+    }
   } catch (error) {
     // no se relanza: un DM fallido no debe hacer que Meta reintente el webhook
     console.error(`Error enviando invitación por comentario a @${comment.username}:`, error);

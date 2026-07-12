@@ -44,14 +44,27 @@ export async function handleFacebookComment(comment: FacebookComment) {
 
   const texto = personalizeInvite(config.comment_dm_text, comment.userName);
   try {
+    let resultado;
     try {
-      await sendMessengerPrivateReply(comment.commentId, texto);
+      resultado = await sendMessengerPrivateReply(comment.commentId, texto);
     } catch {
       // Meta a veces responde 500 transitorio; un solo reintento lo suele salvar
       await new Promise((r) => setTimeout(r, 3000));
-      await sendMessengerPrivateReply(comment.commentId, texto);
+      resultado = await sendMessengerPrivateReply(comment.commentId, texto);
     }
     await supabase.from("comment_invites").update({ status: "sent" }).eq("id", invite.id);
+
+    // La API de perfiles de Messenger está bloqueada sin revisión de Meta, pero
+    // aquí tenemos el nombre real (del comentario) y el PSID (de la respuesta):
+    // se guarda el contacto ya con nombre para que la bandeja no muestre números.
+    if (resultado.recipientId && comment.userName) {
+      await supabase
+        .from("contacts")
+        .upsert(
+          { channel: "messenger", external_id: resultado.recipientId, display_name: comment.userName },
+          { onConflict: "channel,external_id" }
+        );
+    }
   } catch (error) {
     // no se relanza: un DM fallido no debe hacer que Meta reintente el webhook
     console.error(`Error enviando invitación por comentario de Facebook a ${comment.userName}:`, error);
