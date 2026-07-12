@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { nombreDelContacto, typoEnNombre } from "@/lib/inbox/nombre-saludo";
 import { sendForChannel } from "@/lib/meta/send-message";
+import { sendMessengerLinkCard } from "@/lib/meta/send-messenger-card";
 import type { Channel } from "@/types/database";
 
 // Seguimiento fijo de la invitación por comentario (diseño de Roy): a la PRIMERA
@@ -81,6 +82,27 @@ export async function sendInviteFollowUpIfFirstReply(
 
     // pausa larga entre burbujas (pedido de Roy): como si estuviera tecleando
     if (i < burbujas.length - 1) await new Promise((r) => setTimeout(r, 20_000));
+  }
+
+  // En Messenger el link de la invitación no mostró vista previa (limitación de
+  // bots): aquí, ya con la ventana abierta, se manda la tarjeta con imagen + botón.
+  if (channel === "messenger") {
+    try {
+      await new Promise((r) => setTimeout(r, 4000));
+      const metaMessageId = await sendMessengerLinkCard(externalId);
+      await supabase.from("messages").insert({
+        conversation_id: conversationId,
+        contact_id: contactId,
+        channel,
+        direction: "out",
+        sender_type: "ai",
+        content: "📎 Tarjeta: Clase Gratuita de Control de Hemorragias — Regístrate gratis",
+        status: "sent",
+        meta_message_id: metaMessageId,
+      });
+    } catch (error) {
+      console.error("Error enviando tarjeta de Messenger:", error);
+    }
   }
 
   return true;
