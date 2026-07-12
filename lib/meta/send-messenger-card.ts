@@ -22,7 +22,7 @@ export async function sendMessengerLinkCard(recipientId: string): Promise<string
             elements: [
               {
                 title: "VITA RESCUE — Clase Gratuita: Control de Hemorragias",
-                subtitle: "Viernes 1 de agosto · 6:00 pm CDMX · 100% en vivo",
+                subtitle: "Sábado 1 de agosto · 6:00 pm CDMX · 100% en vivo",
                 image_url: "https://hemorragias-vita.vercel.app/opengraph-image",
                 default_action: {
                   type: "web_url",
