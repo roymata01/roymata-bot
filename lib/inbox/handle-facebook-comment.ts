@@ -1,3 +1,4 @@
+import { comentarioRelacionadoConClase } from "@/lib/ai/comment-relevance";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { conRef } from "@/lib/meta/link-ref";
 import { replyToFacebookComment, respuestaPublicaAleatoria } from "@/lib/meta/reply-to-comment";
@@ -86,10 +87,13 @@ export async function handleFacebookComment(comment: FacebookComment) {
       }
     }
 
-    // Respuesta pública al comentario (requiere pages_manage_engagement en el
-    // token — si aún no está, falla silencioso y el DM ya salió igual).
+    // Respuesta pública al comentario, solo si tiene que ver con la clase
+    // (regla de Roy). Requiere pages_manage_engagement en el token — si aún
+    // no está, falla silencioso y el DM ya salió igual.
     try {
-      await replyToFacebookComment(comment.commentId, respuestaPublicaAleatoria());
+      if (await comentarioRelacionadoConClase(comment.text)) {
+        await replyToFacebookComment(comment.commentId, respuestaPublicaAleatoria());
+      }
     } catch (error) {
       console.error("Error en respuesta pública de Facebook:", error);
     }

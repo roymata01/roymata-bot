@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { comentarioRelacionadoConClase } from "@/lib/ai/comment-relevance";
 import { nombreDesdeUsername } from "@/lib/ai/name-from-username";
 import { conRef } from "@/lib/meta/link-ref";
 import { replyToInstagramComment, respuestaPublicaAleatoria } from "@/lib/meta/reply-to-comment";
@@ -94,9 +95,12 @@ export async function handleInstagramComment(comment: InstagramComment) {
     }
 
     // Respuesta pública al comentario: manda a la persona a su bandeja y les
-    // enseña a los demás que comentando reciben algo. Si falla, no pasa nada.
+    // enseña a los demás que comentando reciben algo. Solo si el comentario
+    // tiene que ver con la clase (regla de Roy) — en un "😂" se vería raro.
     try {
-      await replyToInstagramComment(comment.commentId, respuestaPublicaAleatoria());
+      if (await comentarioRelacionadoConClase(comment.text)) {
+        await replyToInstagramComment(comment.commentId, respuestaPublicaAleatoria());
+      }
     } catch (error) {
       console.error("Error en respuesta pública de Instagram:", error);
     }
