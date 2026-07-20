@@ -57,7 +57,10 @@ export async function processInboundMessage(msg: InboundMessage) {
     await escalateConversation(conversation.id);
     return;
   }
-  if (category === "personal") return; // la IA no se mete, Roy contesta si quiere
+  // Regla de Roy: en la página de Facebook el bot contesta TODO (ahí escribe
+  // público del negocio, no amigos) y encamina hacia el curso. En Instagram los
+  // mensajes personales se quedan callados para que Roy conteste él.
+  if (category === "personal" && msg.channel !== "messenger") return;
 
   // Cotizaciones grupales (empresa/escuela): detecta y junta los datos del
   // cliente en quote_requests para el apartado "Cotizaciones" del panel.
