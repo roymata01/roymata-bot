@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchInstagramProfile, fetchMessengerProfile } from "@/lib/meta/fetch-profile";
+import { nombreMessenger } from "@/lib/meta/fetch-messenger-name";
 import type { InboundMessage } from "@/lib/meta/types";
 
 // Idempotente: el índice único de messages(channel, meta_message_id) es la fuente
@@ -28,6 +29,9 @@ export async function ingestInboundMessage(msg: InboundMessage) {
       const profile = await fetchMessengerProfile(msg.externalId);
       displayName = displayName ?? profile.displayName;
       avatarUrl = profile.avatarUrl;
+      // la API de perfil está bloqueada sin App Review; la de conversaciones sí
+      // da el nombre — respaldo para que la bandeja no muestre solo números
+      if (!displayName) displayName = await nombreMessenger(msg.externalId);
     }
   }
 
