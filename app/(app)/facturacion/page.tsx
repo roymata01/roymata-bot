@@ -43,15 +43,34 @@ export default function FacturacionPage() {
     load();
   }, [load]);
 
+  // El iPhone sube HEIC, que la visión de la IA no lee: se convierte a JPEG en
+  // el navegador (Safari sí decodifica HEIC) y de paso se reduce el peso.
+  async function aJpeg(file: File): Promise<Blob> {
+    try {
+      const bmp = await createImageBitmap(file);
+      const MAX = 2200;
+      const escala = Math.min(1, MAX / Math.max(bmp.width, bmp.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(bmp.width * escala);
+      canvas.height = Math.round(bmp.height * escala);
+      canvas.getContext("2d")!.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.85));
+      if (!blob) throw new Error("conversión vacía");
+      return blob;
+    } catch {
+      return file; // si este navegador no puede, sube el original
+    }
+  }
+
   async function handleFiles(files: FileList | null) {
     if (!files?.length) return;
     setSubiendo(true);
     try {
       for (const file of Array.from(files)) {
+        const jpeg = await aJpeg(file);
         const ahora = new Date();
-        const ext = file.type === "image/png" ? "png" : "jpg";
-        const path = `${ahora.getFullYear()}/${String(ahora.getMonth() + 1).padStart(2, "0")}/${crypto.randomUUID()}.${ext}`;
-        const { error: upError } = await supabase.storage.from("tickets").upload(path, file, { contentType: file.type });
+        const path = `${ahora.getFullYear()}/${String(ahora.getMonth() + 1).padStart(2, "0")}/${crypto.randomUUID()}.jpg`;
+        const { error: upError } = await supabase.storage.from("tickets").upload(path, jpeg, { contentType: "image/jpeg" });
         if (upError) throw upError;
         const { data: fila, error: insError } = await supabase
           .from("tickets")
