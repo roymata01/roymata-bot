@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
       console.error("Error analizando ticket:", error);
       await supabase
         .from("tickets")
-        .update({ status: "INCOMPLETO", notas: "El análisis automático falló — revisar foto" })
+        .update({ status: "INCOMPLETO", notas: `Análisis falló: ${String(error).slice(0, 280)}` })
         .eq("id", id);
     }
   });
