@@ -18,7 +18,7 @@ export async function analyzeTicket(imageBase64: string, mediaType: string): Pro
   const anthropic = createAnthropicClient();
   const response = await anthropic.messages.create({
     model: "claude-sonnet-5",
-    max_tokens: 500,
+    max_tokens: 900,
     system: `Eres un extractor de datos de tickets de compra mexicanos para facturación (CFDI).
 
 Extrae SOLO lo que se lea claramente en el ticket. NUNCA inventes ni adivines datos — un dato mal extraído genera una factura inválida ante el SAT. Si un campo no se distingue, usa null.
@@ -54,5 +54,7 @@ En datos_extra incluye solo las llaves que realmente aparezcan en el ticket. "le
     .trim()
     .replace(/^```json?\s*|\s*```$/g, "");
 
-  return JSON.parse(raw) as DatosTicket;
+  // recorta al objeto JSON por si el modelo agregó texto alrededor
+  const soloJson = raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1);
+  return JSON.parse(soloJson) as DatosTicket;
 }
