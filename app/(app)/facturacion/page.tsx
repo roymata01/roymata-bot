@@ -116,11 +116,11 @@ export default function FacturacionPage() {
           <button onClick={() => inputRef.current?.click()} disabled={subiendo} className="btn btn-primary">
             {subiendo ? "Subiendo..." : "📷 Subir ticket"}
           </button>
+          {/* sin "capture": el teléfono ofrece elegir de la fototeca O tomar foto */}
           <input
             ref={inputRef}
             type="file"
             accept="image/*"
-            capture="environment"
             multiple
             className="hidden"
             onChange={(e) => handleFiles(e.target.files)}
