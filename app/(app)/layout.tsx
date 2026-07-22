@@ -8,6 +8,7 @@ import {
   DollarIcon,
   FlaskIcon,
   InboxIcon,
+  ReceiptIcon,
   SlidersIcon,
   UsersIcon,
   ZapIcon,
@@ -47,6 +48,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <NavLink href="/personalizacion" icon={<SlidersIcon />}>Personalización</NavLink>
           <NavLink href="/probar-bot" icon={<FlaskIcon />}>Probar el bot</NavLink>
           <p className="label-xs px-2.5 pb-1.5 pt-4">Cuenta</p>
+          <NavLink href="/facturacion" icon={<ReceiptIcon />}>Facturación</NavLink>
           <NavLink href="/costos" icon={<DollarIcon />}>Costos</NavLink>
         </nav>
         <div className="flex-1 overflow-hidden">{children}</div>

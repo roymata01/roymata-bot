@@ -87,6 +87,27 @@ export interface AssistantSettings {
   updated_at: string;
 }
 
+export type TicketStatus = "PENDIENTE" | "FACTURADO" | "REVISION_MANUAL" | "INCOMPLETO" | "VENCIDO";
+
+export interface Ticket {
+  id: string;
+  fecha_compra: string | null;
+  tienda: string | null;
+  monto: number | null;
+  folio: string | null;
+  datos_extra: Record<string, string>;
+  foto_path: string;
+  status: TicketStatus;
+  fecha_limite: string | null;
+  factura_pdf_url: string | null;
+  factura_xml_url: string | null;
+  fecha_facturado: string | null;
+  drive_sync: boolean;
+  notas: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface QuoteRequest {
   id: string;
   conversation_id: string;

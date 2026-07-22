@@ -98,6 +98,16 @@ export function FlaskIcon(p: IconProps) {
   );
 }
 
+export function ReceiptIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M5 3v18l2-1.5L9 21l2-1.5L13 21l2-1.5L17 21l2-1.5V3l-2 1.5L15 3l-2 1.5L11 3 9 4.5 7 3 5 4.5" />
+      <path d="M9 9h6" />
+      <path d="M9 13h6" />
+    </Svg>
+  );
+}
+
 export function ClipboardIcon(p: IconProps) {
   return (
     <Svg {...p}>
