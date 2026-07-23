@@ -20,7 +20,7 @@ function Avatar({ contact }: { contact: Contact }) {
     return <img src={contact.avatar_url} alt={label} className="h-8 w-8 shrink-0 rounded-full object-cover" />;
   }
   return (
-    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.07] text-xs font-semibold text-[var(--text-2)]">
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--hover)] text-xs font-semibold text-[var(--text-2)]">
       {label.replace("@", "").slice(0, 1).toUpperCase()}
     </div>
   );
@@ -42,8 +42,8 @@ export function ConversationListItem({
       onClick={onClick}
       className={`flex w-full items-start gap-2.5 border-b border-[var(--border)] border-l-2 px-3 py-2.5 text-left transition ${
         selected
-          ? "border-l-[var(--accent)] bg-white/[0.04]"
-          : "border-l-transparent hover:bg-white/[0.03]"
+          ? "border-l-[var(--accent)] bg-[var(--hover)]"
+          : "border-l-transparent hover:bg-[var(--hover)]"
       }`}
     >
       <Avatar contact={contact} />

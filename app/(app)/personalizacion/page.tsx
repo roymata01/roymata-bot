@@ -271,7 +271,7 @@ export default function PersonalizacionPage() {
           ))}
           <button
             onClick={() => openEdit({ type: "new_section" })}
-            className="flex min-h-[120px] flex-col items-center justify-center gap-2 rounded-[10px] border border-dashed border-white/15 text-[var(--text-3)] transition hover:border-white/30 hover:text-[var(--text-2)]"
+            className="flex min-h-[120px] flex-col items-center justify-center gap-2 rounded-[10px] border border-dashed border-[var(--border)] text-[var(--text-3)] transition hover:border-[var(--border-strong)] hover:text-[var(--text-2)]"
           >
             <PlusIcon size={18} />
             <span className="text-[13px] font-medium">Agregar sección</span>
@@ -429,7 +429,7 @@ export default function PersonalizacionPage() {
           {target.type === "section" && (
             <button
               onClick={() => handleDeleteSection(target.id)}
-              className="self-start rounded-lg border border-white/10 px-3 py-1.5 text-sm font-semibold text-red-400 hover:bg-red-500/10"
+              className="self-start rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm font-semibold text-red-400 hover:bg-red-500/10"
             >
               Borrar sección
             </button>

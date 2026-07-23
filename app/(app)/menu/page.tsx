@@ -60,8 +60,8 @@ export default function MenuPage() {
             <p className="label-xs">{g.titulo}</p>
             <div className="flex flex-col gap-2">
               {g.items.map((i) => (
-                <Link key={i.href + i.label} href={i.href} className="card flex items-center gap-3 p-3.5 transition hover:border-white/20">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-2)] text-[var(--text-2)]">
+                <Link key={i.href + i.label} href={i.href} className="card flex items-center gap-3 p-3.5 transition hover:border-[var(--border-strong)]">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-soft)] text-[var(--accent)]">
                     {i.icon}
                   </span>
                   <span className="flex flex-col">

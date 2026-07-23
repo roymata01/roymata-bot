@@ -73,7 +73,7 @@ export default function CotizacionesPage() {
             <div
               key={q.id}
               onClick={() => router.push(`/inbox?c=${q.conversation_id}`)}
-              className="card cursor-pointer p-4 transition hover:border-white/20"
+              className="card cursor-pointer p-4 transition hover:border-[var(--border-strong)]"
               title="Ver conversación"
             >
               <div className="flex items-start justify-between gap-3">

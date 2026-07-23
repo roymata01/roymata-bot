@@ -16,7 +16,7 @@ interface Datos {
 
 function Tarjeta({ href, titulo, valor, detalle, alerta }: { href: string; titulo: string; valor: string | number; detalle?: string; alerta?: boolean }) {
   return (
-    <Link href={href} className="card flex flex-col gap-1 p-4 transition hover:border-white/20">
+    <Link href={href} className="card flex flex-col gap-1 p-4 transition hover:border-[var(--border-strong)]">
       <p className="label-xs">{titulo}</p>
       <p className={`num text-2xl font-bold ${alerta ? "text-[#f0b429]" : ""}`}>{valor}</p>
       {detalle && <p className="text-[11px] text-[var(--text-3)]">{detalle}</p>}

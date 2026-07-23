@@ -125,7 +125,7 @@ export default function ResumenPage() {
             {CHANNELS.map((c) => (
               <div key={c.key} className="flex items-center gap-3">
                 <span className="w-24 text-[13px] font-medium">{c.label}</span>
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--hover)]">
                   <div
                     className="h-full rounded-full"
                     style={{

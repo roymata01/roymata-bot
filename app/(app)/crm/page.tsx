@@ -75,14 +75,14 @@ export default function CrmPage() {
               key={c.id}
               onClick={() => setSelectedId(c.id)}
               className={`flex w-full items-center gap-2.5 border-b border-[var(--border)] border-l-2 px-3 py-2.5 text-left transition ${
-                c.id === selectedId ? "border-l-[var(--accent)] bg-white/[0.04]" : "border-l-transparent hover:bg-white/[0.03]"
+                c.id === selectedId ? "border-l-[var(--accent)] bg-[var(--hover)]" : "border-l-transparent hover:bg-[var(--hover)]"
               }`}
             >
               {c.avatar_url ? (
                 // eslint-disable-next-line @next/next/no-img-element -- avatares de CDN externo
                 <img src={c.avatar_url} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
               ) : (
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.07] text-xs font-semibold text-[var(--text-2)]">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--hover)] text-xs font-semibold text-[var(--text-2)]">
                   {(c.display_name || c.external_id).replace("@", "").slice(0, 1).toUpperCase()}
                 </div>
               )}

@@ -24,7 +24,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/inicio");
+    router.push("/hub");
     router.refresh();
   }
 
@@ -37,7 +37,7 @@ export default function LoginPage() {
           </span>
           <div>
             <h1 className="text-[14px] font-semibold tracking-wide">VITA RESCUE</h1>
-            <p className="text-xs text-[var(--text-3)]">Inbox</p>
+            <p className="text-xs text-[var(--text-3)]">Sistema</p>
           </div>
         </div>
 

@@ -20,8 +20,8 @@ export function NavLink({
       href={href}
       className={`flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition ${
         active
-          ? "bg-white/[0.07] text-[var(--text)]"
-          : "text-[var(--text-2)] hover:bg-white/[0.04] hover:text-[var(--text)]"
+          ? "bg-[var(--hover)] text-[var(--text)]"
+          : "text-[var(--text-2)] hover:bg-[var(--hover)] hover:text-[var(--text)]"
       }`}
     >
       {icon && <span className={active ? "text-[var(--accent)]" : "text-[var(--text-3)]"}>{icon}</span>}

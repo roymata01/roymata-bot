@@ -109,7 +109,7 @@ export default function CostosPage() {
             {ultimosDias.map(([day, cost]) => (
               <div key={day} className="flex items-center gap-3 text-[13px]">
                 <span className="num w-24 text-[var(--text-2)]">{day}</span>
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--hover)]">
                   <div
                     className="h-full rounded-full bg-[var(--accent)]"
                     style={{ width: `${Math.min(100, (cost / Math.max(...ultimosDias.map((d) => d[1]), 0.0001)) * 100)}%` }}
