@@ -222,6 +222,27 @@ export function PencilIcon(p: IconProps) {
   );
 }
 
+export function WalletIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <rect x="2" y="7" width="20" height="14" rx="2" />
+      <path d="M16 14a2 2 0 1 0 0-1.999" />
+      <path d="M2 11h20" />
+      <path d="M6 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2" />
+    </Svg>
+  );
+}
+
+export function MenuIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M4 6h16" />
+      <path d="M4 12h16" />
+      <path d="M4 18h16" />
+    </Svg>
+  );
+}
+
 export function PlusIcon(p: IconProps) {
   return (
     <Svg {...p}>

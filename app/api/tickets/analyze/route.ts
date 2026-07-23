@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { analyzeTicket } from "@/lib/ai/analyze-ticket";
+import { analyzeTicket, CATEGORIAS_GASTO } from "@/lib/ai/analyze-ticket";
 
 export const maxDuration = 60;
 
@@ -59,6 +59,27 @@ export async function POST(req: NextRequest) {
           notas: datos.notas,
         })
         .eq("id", id);
+
+      // Registro automático en el reporte de gastos personales.
+      // id determinístico "tk-<uuid>" + upsert: re-analizar un ticket no duplica el gasto.
+      if (datos.monto && datos.fecha_compra) {
+        const categoria = CATEGORIAS_GASTO.includes(datos.categoria_gasto ?? "")
+          ? (datos.categoria_gasto as string)
+          : "Varios";
+        await supabase.from("registros").upsert(
+          {
+            id: `tk-${id}`,
+            type: "expense",
+            date: datos.fecha_compra,
+            amount: datos.monto,
+            category: categoria,
+            concept: `Ticket ${datos.tienda ?? "sin tienda"}${datos.folio ? ` #${datos.folio}` : ""}`,
+            establishment: datos.tienda,
+            quantity: 1,
+          },
+          { onConflict: "id" }
+        );
+      }
     } catch (error) {
       console.error("Error analizando ticket:", error);
       await supabase

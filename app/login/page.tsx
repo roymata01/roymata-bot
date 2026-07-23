@@ -24,7 +24,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/inbox");
+    router.push("/inicio");
     router.refresh();
   }
 
