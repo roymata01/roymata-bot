@@ -3,7 +3,7 @@
 // tarjeta con imagen + botón. Solo funciona con la ventana de 24h abierta
 // (no en private replies), por eso va en keyword y seguimiento, no en la invitación.
 
-const LINK_REGISTRO = "https://hemorragias-vita.vercel.app/?fb=1";
+const LINK_REGISTRO = "https://cursos.vitarescue.com.mx/?fb=1";
 
 export async function sendMessengerLinkCard(recipientId: string): Promise<string> {
   const res = await fetch("https://graph.facebook.com/v21.0/me/messages", {
@@ -23,7 +23,7 @@ export async function sendMessengerLinkCard(recipientId: string): Promise<string
               {
                 title: "VITA RESCUE — Clase Gratuita: Control de Hemorragias",
                 subtitle: "Sábado 1 de agosto · 6:00 pm CDMX · 100% en vivo",
-                image_url: "https://hemorragias-vita.vercel.app/opengraph-image",
+                image_url: "https://cursos.vitarescue.com.mx/opengraph-image",
                 default_action: {
                   type: "web_url",
                   url: LINK_REGISTRO,

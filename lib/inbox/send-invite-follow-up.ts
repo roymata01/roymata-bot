@@ -14,7 +14,8 @@ const PREGUNTA_SEGUIMIENTO = "Pudiste registrarte? Si tienes dudas escríbeme co
 
 // La invitación se reconoce por llevar el link de registro y venir del bot
 // (sender_user_id null = no fue enviada a mano desde el panel).
-const LINK_REGISTRO = "hemorragias-vita.vercel.app";
+// Se aceptan ambos dominios: el propio y el viejo de Vercel (mensajes históricos).
+const LINKS_REGISTRO = ["cursos.vitarescue.com.mx", "hemorragias-vita.vercel.app"];
 
 export async function sendInviteFollowUpIfFirstReply(
   conversationId: string,
@@ -37,7 +38,7 @@ export async function sendInviteFollowUpIfFirstReply(
       m.direction === "out" &&
       m.sender_type === "human" &&
       !m.sender_user_id &&
-      (m.content ?? "").includes(LINK_REGISTRO)
+      LINKS_REGISTRO.some((d) => (m.content ?? "").includes(d))
   );
   if (idxInvitacion === -1) return false;
 
