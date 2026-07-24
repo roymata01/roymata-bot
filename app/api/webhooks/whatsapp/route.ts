@@ -22,6 +22,13 @@ export async function POST(req: NextRequest) {
   }
 
   const body = JSON.parse(rawBody);
+
+  // registro temporal de acuses de entrega/error para diagnóstico
+  try {
+    const statuses = body?.entry?.[0]?.changes?.[0]?.value?.statuses;
+    if (statuses) console.log("WA status:", JSON.stringify(statuses).slice(0, 800));
+  } catch {}
+
   const messages = parseWhatsAppPayload(body);
 
   try {
