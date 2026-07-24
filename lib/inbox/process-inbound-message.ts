@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { ingestInboundMessage } from "@/lib/inbox/ingest-inbound-message";
 import { sendInviteFollowUpIfFirstReply } from "@/lib/inbox/send-invite-follow-up";
 import { sendKeywordReplyIfMatch } from "@/lib/inbox/handle-keyword-reply";
+import { handleCampaignReply } from "@/lib/inbox/handle-campaign-reply";
 import { checkEscalation } from "@/lib/ai/check-escalation";
 import { classifyMessage } from "@/lib/ai/classify-message";
 import { maybeCaptureQuoteRequest } from "@/lib/ai/extract-quote";
@@ -31,6 +32,13 @@ export async function processInboundMessage(msg: InboundMessage) {
   // Pausa humana antes de cualquier respuesta automática: nadie contesta en 1
   // segundo. La escalación de emergencias ya corrió (esa sí es instantánea).
   await new Promise((r) => setTimeout(r, 8000 + Math.random() * 7000));
+
+  // "gracias"/"enterado" al recordatorio de campaña de WhatsApp -> siembra la
+  // semilla del certificado (sin precios) y abre la puerta para el día de clase.
+  if (msg.channel === "whatsapp") {
+    const respondido = await handleCampaignReply(conversation.id, contact.id, msg.externalId, msg.content);
+    if (respondido) return;
+  }
 
   // Palabra clave ("responde CURSO a esta historia") -> link de registro,
   // determinista. Va antes del seguimiento: si responden "curso" a la

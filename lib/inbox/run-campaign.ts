@@ -1,6 +1,45 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppTemplate } from "@/lib/meta/send-whatsapp-template";
 
+// Texto que la detección del "gracias" busca para saber que recibió el
+// recordatorio. Debe coincidir con el inicio del cuerpo de la plantilla.
+const RESUMEN_RECORDATORIO =
+  "Recordatorio enviado: confirmación de tu registro a la clase de Control de Hemorragias del 1 de agosto.";
+
+type Supa = ReturnType<typeof createAdminClient>;
+
+async function registrarEnvioEnConversacion(supabase: Supa, phone: string, nombre: string | null, metaMessageId: string) {
+  try {
+    const { data: contacto } = await supabase
+      .from("contacts")
+      .upsert(
+        { channel: "whatsapp", external_id: phone, phone, ...(nombre ? { display_name: nombre } : {}) },
+        { onConflict: "channel,external_id" }
+      )
+      .select()
+      .single();
+    if (!contacto) return;
+    const { data: conv } = await supabase
+      .from("conversations")
+      .upsert({ contact_id: contacto.id, channel: "whatsapp" }, { onConflict: "contact_id,channel" })
+      .select()
+      .single();
+    if (!conv) return;
+    await supabase.from("messages").insert({
+      conversation_id: conv.id,
+      contact_id: contacto.id,
+      channel: "whatsapp",
+      direction: "out",
+      sender_type: "human",
+      content: RESUMEN_RECORDATORIO,
+      status: "sent",
+      meta_message_id: metaMessageId,
+    });
+  } catch (e) {
+    console.error("Error registrando envío de campaña en conversación:", e);
+  }
+}
+
 // Envía una tanda de la campaña: toma destinatarios pendientes (hasta el tope
 // por_dia), salta a los que se dieron de baja, y manda la plantilla con una
 // pausa entre cada uno para no disparar los filtros anti-spam de WhatsApp.
@@ -34,8 +73,11 @@ export async function runCampaignBatch(campaignId: string): Promise<{ enviados: 
       continue;
     }
     try {
-      await sendWhatsAppTemplate(r.phone, campaign.template_name, campaign.template_lang, r.nombre ?? "");
+      const mid = await sendWhatsAppTemplate(r.phone, campaign.template_name, campaign.template_lang, r.nombre ?? "");
       await supabase.from("wa_campaign_recipients").update({ status: "enviado", sent_at: new Date().toISOString() }).eq("id", r.id);
+      // registra el envío en la conversación de la persona: así el chat queda
+      // completo y el bot sabe que recibió el recordatorio (para el "gracias").
+      await registrarEnvioEnConversacion(supabase, r.phone, r.nombre ?? null, mid);
       enviados++;
     } catch (error) {
       await supabase.from("wa_campaign_recipients").update({ status: "fallido", error: String(error).slice(0, 300) }).eq("id", r.id);
