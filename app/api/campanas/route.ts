@@ -24,17 +24,23 @@ export async function POST(req: NextRequest) {
 
   const supabase = createAdminClient();
 
-  // registrados con teléfono (base de la página del curso)
-  const res = await fetch(
-    `${process.env.VITA_SUPABASE_URL}/rest/v1/registrations?select=full_name,phone&phone=not.is.null`,
-    {
-      headers: {
-        apikey: process.env.VITA_SUPABASE_SERVICE_KEY!,
-        Authorization: `Bearer ${process.env.VITA_SUPABASE_SERVICE_KEY!}`,
-      },
-    }
-  );
-  const registros: { full_name: string | null; phone: string }[] = await res.json();
+  // registrados con teléfono (base de la página del curso).
+  // La API REST devuelve máx 1000 por página: se pagina hasta agotar.
+  const registros: { full_name: string | null; phone: string }[] = [];
+  for (let offset = 0; offset < 100_000; offset += 1000) {
+    const res = await fetch(
+      `${process.env.VITA_SUPABASE_URL}/rest/v1/registrations?select=full_name,phone&phone=not.is.null&limit=1000&offset=${offset}`,
+      {
+        headers: {
+          apikey: process.env.VITA_SUPABASE_SERVICE_KEY!,
+          Authorization: `Bearer ${process.env.VITA_SUPABASE_SERVICE_KEY!}`,
+        },
+      }
+    );
+    const lote: { full_name: string | null; phone: string }[] = await res.json();
+    registros.push(...lote);
+    if (lote.length < 1000) break;
+  }
 
   // normaliza y deduplica por teléfono
   const porTel = new Map<string, string>();
