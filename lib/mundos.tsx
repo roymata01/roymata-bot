@@ -36,6 +36,7 @@ export const MUNDOS: Mundo[] = [
       { href: "/inbox", label: "Conversaciones", icon: <InboxIcon /> },
       { href: "/crm", label: "CRM", icon: <UsersIcon /> },
       { href: "/cotizaciones", label: "Cotizaciones", icon: <ClipboardIcon /> },
+      { href: "/campanas", label: "Campañas", icon: <ZapIcon /> },
       { href: "/resumen", label: "Métricas", icon: <ChartIcon /> },
     ],
   },

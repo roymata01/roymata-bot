@@ -3,10 +3,15 @@ import { handleWebhookVerification } from "@/lib/meta/verify-webhook";
 import { isValidMetaSignature } from "@/lib/meta/verify-signature";
 import { parseWhatsAppPayload } from "@/lib/meta/parse-whatsapp";
 import { processInboundMessage } from "@/lib/inbox/process-inbound-message";
+import { normalizaTelMx } from "@/lib/meta/send-whatsapp-template";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export function GET(req: NextRequest) {
   return handleWebhookVerification(req);
 }
+
+// "BAJA"/"STOP"/"NO"/"cancelar" = opt-out de campañas de WhatsApp.
+const PALABRAS_BAJA = /^\s*(baja|stop|no|cancelar|dar de baja|no más|no mas)\s*!?\.?\s*$/i;
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
@@ -21,6 +26,12 @@ export async function POST(req: NextRequest) {
 
   try {
     for (const message of messages) {
+      // opt-out: si el mensaje es "BAJA", se registra y no pasa al bot
+      if (PALABRAS_BAJA.test(message.content ?? "")) {
+        const tel = normalizaTelMx(message.externalId);
+        if (tel) await createAdminClient().from("wa_optouts").upsert({ phone: tel }, { onConflict: "phone" });
+        continue;
+      }
       await processInboundMessage(message);
     }
   } catch (error) {
