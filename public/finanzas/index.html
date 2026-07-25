@@ -187,6 +187,10 @@ tr:hover td{background:#fafafa}
 /* ── FAB ── */
 .fab{position:fixed;bottom:24px;right:24px;z-index:90;background:#16a34a;color:#fff;border:none;width:56px;height:56px;border-radius:50%;font-size:1.5rem;cursor:pointer;box-shadow:0 4px 16px rgba(22,163,74,.45);display:flex;align-items:center;justify-content:center;transition:transform .15s,box-shadow .15s}
 .fab:hover{transform:scale(1.08);box-shadow:0 6px 20px rgba(22,163,74,.6)}
+.fab-mic{position:fixed;bottom:92px;right:24px;z-index:90;background:#1a56db;color:#fff;border:none;width:56px;height:56px;border-radius:50%;font-size:1.4rem;cursor:pointer;box-shadow:0 4px 16px rgba(26,86,219,.45);display:flex;align-items:center;justify-content:center;transition:transform .15s}
+.fab-mic:hover{transform:scale(1.08)}
+.fab-mic.rec{background:#dc2626;animation:micpulse 1s infinite}
+@keyframes micpulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.5)}50%{box-shadow:0 0 0 12px rgba(220,38,38,0)}}
 
 /* ── EXPORT ── */
 .export-bar{text-align:center;padding:8px 0 36px}
@@ -410,6 +414,7 @@ tr:hover td{background:#fafafa}
 </div>
 
 <!-- FAB -->
+<button class="fab-mic" id="micBtn" onclick="toggleMic()" title="Agregar por voz" aria-label="Agregar por voz">🎤</button>
 <button class="fab" onclick="openForm()" title="Agregar registro">＋</button>
 
 <!-- ══ MODAL: FORM ══ -->
@@ -1805,6 +1810,47 @@ function onDragEnd(e){
 // ══════════════════════════════════
 //  INIT
 // ══════════════════════════════════
+
+// ══════════════════════════════════
+//  MICRÓFONO — agregar gasto por voz
+// ══════════════════════════════════
+let _recog=null,_recActivo=false;
+function toggleMic(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){ showToast('⚠️ Tu navegador no soporta dictado por voz'); return; }
+  if(_recActivo){ try{_recog.stop()}catch{} return; }
+  _recog=new SR(); _recog.lang='es-MX'; _recog.interimResults=false; _recog.maxAlternatives=1;
+  const btn=document.getElementById('micBtn');
+  _recog.onstart=()=>{ _recActivo=true; btn.classList.add('rec'); showToast('🎤 Te escucho… di el gasto'); };
+  _recog.onend=()=>{ _recActivo=false; btn.classList.remove('rec'); };
+  _recog.onerror=(e)=>{ _recActivo=false; btn.classList.remove('rec'); showToast('⚠️ No pude escuchar ('+e.error+')'); };
+  _recog.onresult=async(ev)=>{
+    const texto=ev.results[0][0].transcript;
+    showToast('💭 "'+texto+'"');
+    await procesarVoz(texto);
+  };
+  _recog.start();
+}
+async function procesarVoz(texto){
+  try{
+    setLoad(true);
+    const res=await fetch('/api/finanzas/parse-voz',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({transcript:texto,expCats:allExpCats(),incCats:allIncCats()})});
+    const d=await res.json();
+    if(!res.ok||!d.amount){ setLoad(false); showToast('⚠️ No entendí el monto, intenta de nuevo'); return; }
+    const record={id:uid(),type:d.type||'expense',date:new Date().toISOString().slice(0,10),
+      amount:Number(d.amount),category:d.category||'Otros',concept:d.concept||texto.slice(0,40),establishment:null,quantity:1};
+    records.unshift(record); records.sort((a,b)=>b.date.localeCompare(a.date)); saveLocal(); renderAll();
+    if(navigator.onLine){
+      try{ const{error}=await db.from('registros').insert(record); if(error) throw error; }
+      catch(e){ const pend=lsG(LS.pend,[]); pend.push(record); lsS(LS.pend,pend); }
+    }else{ const pend=lsG(LS.pend,[]); pend.push(record); lsS(LS.pend,pend); }
+    setLoad(false);
+    const signo=record.type==='expense'?'Gasto':'Ingreso';
+    showToast('✅ '+signo+' de '+fmt(record.amount)+' en '+record.category);
+  }catch(e){ setLoad(false); showToast('⚠️ Error al procesar la voz'); }
+}
+
 setType('income');
 loadAll();
 </script>
