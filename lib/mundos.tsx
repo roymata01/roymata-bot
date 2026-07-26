@@ -1,4 +1,5 @@
 import {
+  BookIcon,
   ChartIcon,
   ClipboardIcon,
   DocIcon,
@@ -36,6 +37,7 @@ export const MUNDOS: Mundo[] = [
       { href: "/inbox", label: "Conversaciones", icon: <InboxIcon /> },
       { href: "/crm", label: "CRM", icon: <UsersIcon /> },
       { href: "/cotizaciones", label: "Cotizaciones", icon: <ClipboardIcon /> },
+      { href: "/cursos", label: "Cursos", icon: <BookIcon /> },
       { href: "/campanas", label: "Campañas", icon: <ZapIcon /> },
       { href: "/resumen", label: "Métricas", icon: <ChartIcon /> },
     ],
