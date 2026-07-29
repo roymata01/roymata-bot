@@ -2,12 +2,13 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runCampaignBatch } from "@/lib/inbox/run-campaign";
 
-// Cron diario: continúa las campañas "enviando". Una sola invocación de Vercel
-// alcanza ~25 envíos (pausa anti-spam de 1.5s con presupuesto de 50s), así que
-// al terminar su tanda esta ruta se re-invoca a sí misma con presupuesto
-// fresco, hasta completar el tope por_dia del día (día calendario de CDMX)
-// o agotar los pendientes. Sin esto, el cron enviaba ~25 al día en total.
-export const maxDuration = 60;
+// Cron diario: continúa las campañas "enviando". Con 300s (el tope del plan) y
+// la pausa anti-spam de 1.5s cada invocación alcanza ~180 envíos; al terminar su
+// tanda la ruta se re-invoca a sí misma con presupuesto fresco, hasta completar
+// el tope por_dia del día (calendario de CDMX) o agotar los pendientes. Antes
+// era de 60s (~25 envíos) y sin cadena: el cron mandaba ~25 al día en total.
+export const maxDuration = 300;
+const PRESUPUESTO_MS = 280_000; // se detiene sola 20s antes del corte
 
 export async function GET(req: NextRequest) {
   if (req.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
   if (!activas?.length) return NextResponse.json({ estado: "sin campañas activas" });
   const campaign = activas[0];
 
-  const r = await runCampaignBatch(campaign.id);
+  const r = await runCampaignBatch(campaign.id, PRESUPUESTO_MS);
 
   // Enviados en lo que va del día de CDMX (UTC-6, sin horario de verano)
   const ahora = new Date();
