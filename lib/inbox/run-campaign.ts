@@ -44,7 +44,9 @@ async function registrarEnvioEnConversacion(supabase: Supa, phone: string, nombr
 // por_dia), salta a los que se dieron de baja, y manda la plantilla con una
 // pausa entre cada uno para no disparar los filtros anti-spam de WhatsApp.
 const PAUSA_MS = 1500;
-const PRESUPUESTO_MS = 50_000; // Vercel corta a 60s; se detiene antes solo
+// Vercel corta a 60s CONTANDO los callbacks de after(). Se dejan ~20s de
+// holgura para que el re-disparo de la cadena siempre alcance a salir.
+const PRESUPUESTO_MS = 38_000;
 
 export async function runCampaignBatch(campaignId: string): Promise<{ enviados: number; fallidos: number; quedan: number }> {
   const inicio = Date.now();

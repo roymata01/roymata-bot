@@ -40,9 +40,12 @@ export async function GET(req: NextRequest) {
   const host = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
   const continua = r.quedan > 0 && (enviadosHoy ?? 0) < (campaign.por_dia ?? 200) && !!host;
   if (continua) {
+    // Solo importa DESPACHAR la petición (la nueva invocación arranca sola en
+    // el servidor); se aborta a los 5s para no esperar sus ~40s de respuesta.
     after(() =>
       fetch(`https://${host}/api/cron/campaign-batch`, {
         headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
+        signal: AbortSignal.timeout(5000),
       }).catch(() => {})
     );
   }
