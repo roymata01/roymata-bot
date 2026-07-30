@@ -30,10 +30,12 @@ export function validarAlumno(d: DatosAlumno): Partial<Record<keyof DatosAlumno,
   else if (curp.length !== 18) errores.curp = "La CURP tiene 18 caracteres.";
   else if (!CURP_RE.test(curp)) errores.curp = "Revisa tu CURP, algún carácter no coincide.";
 
-  // El RFC es opcional: solo se valida si escribieron algo
-  if (rfc && !RFC_RE.test(rfc)) errores.rfc = "Revisa tu RFC (12 o 13 caracteres).";
+  if (!rfc) errores.rfc = "El RFC es necesario.";
+  else if (!RFC_RE.test(rfc)) errores.rfc = "Revisa tu RFC (12 o 13 caracteres).";
 
-  if (d.ocupacion.trim().length > 80) errores.ocupacion = "La ocupación es demasiado larga.";
+  const ocupacion = d.ocupacion.trim();
+  if (!ocupacion) errores.ocupacion = "Escribe tu ocupación.";
+  else if (ocupacion.length > 80) errores.ocupacion = "La ocupación es demasiado larga.";
 
   return errores;
 }

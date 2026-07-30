@@ -130,7 +130,7 @@ export function FormularioAlumno({ curso }: { curso?: string }) {
         />
       </Campo>
 
-      <Campo etiqueta="RFC" ayuda="Si lo tienes a la mano. Sirve para tu factura." opcional error={errores.rfc}>
+      <Campo etiqueta="RFC" ayuda="12 o 13 caracteres." error={errores.rfc}>
         <input
           className="input font-mono tracking-wider uppercase"
           value={datos.rfc}
@@ -142,7 +142,7 @@ export function FormularioAlumno({ curso }: { curso?: string }) {
         />
       </Campo>
 
-      <Campo etiqueta="Ocupación" ayuda="A qué te dedicas hoy." opcional error={errores.ocupacion}>
+      <Campo etiqueta="Ocupación" ayuda="A qué te dedicas hoy." error={errores.ocupacion}>
         <input
           className="input"
           value={datos.ocupacion}
@@ -163,7 +163,7 @@ export function FormularioAlumno({ curso }: { curso?: string }) {
       </button>
 
       <p className="text-center text-[11px] leading-relaxed text-[var(--text-3)]">
-        Tus datos se usan únicamente para emitir tu certificado y tu factura. No se comparten con terceros.
+        Tus datos se usan únicamente para emitir tu certificado. No se comparten con terceros.
       </p>
     </form>
   );
