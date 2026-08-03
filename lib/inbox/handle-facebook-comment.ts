@@ -26,6 +26,10 @@ export async function handleFacebookComment(comment: FacebookComment) {
   const config = settings as { comment_dm_enabled?: boolean; comment_dm_text?: string; is_paused?: boolean } | null;
   if (!config?.comment_dm_enabled || !config.comment_dm_text || config.is_paused) return;
 
+  // El DM SOLO se manda si el comentario tiene que ver con los cursos (mismo
+  // filtro que Instagram — en posts personales nadie recibe DM de venta).
+  if (!(await comentarioRelacionadoConClase(comment.text))) return;
+
   const { data: invite, error: insertError } = await supabase
     .from("comment_invites")
     .insert({
