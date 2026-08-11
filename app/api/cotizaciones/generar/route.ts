@@ -61,8 +61,7 @@ export async function POST(req: NextRequest) {
     pdf = await htmlAPdf(html);
   } catch (err) {
     console.error("Error generando PDF de cotización:", err);
-    const detalle = err instanceof Error ? `${err.message}` : String(err);
-    return NextResponse.json({ error: `No se pudo generar el PDF: ${detalle.slice(0, 300)}` }, { status: 500 });
+    return NextResponse.json({ error: "No se pudo generar el PDF. Intenta de nuevo." }, { status: 500 });
   }
 
   const fileName = `S${folio}.pdf`;
