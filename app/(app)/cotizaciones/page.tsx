@@ -13,12 +13,178 @@ const CAMPOS: { key: keyof QuoteRequest; label: string }[] = [
   { key: "telefono", label: "Teléfono" },
 ];
 
+type Borrador = {
+  id: string;
+  folio: number;
+  pdf_url: string;
+  total: number;
+  descuento_pct: number;
+};
+
+// Flujo: Generar cotización → formulario prellenado → previsualización del PDF
+// → Roy aprueba y la envía por correo y/o por el mismo chat de la solicitud.
+function Cotizador({ quote, onClose, onEnviada }: { quote: QuoteRequest; onClose: () => void; onEnviada: () => void }) {
+  const [dirigida, setDirigida] = useState(quote.organizacion || quote.nombre || quote.contact?.display_name || "");
+  const [personas, setPersonas] = useState(quote.num_personas ? String(quote.num_personas) : "");
+  const [precio, setPrecio] = useState("850");
+  const [viaticos, setViaticos] = useState("0");
+  const [correo, setCorreo] = useState(quote.correo || "");
+  const [borrador, setBorrador] = useState<Borrador | null>(null);
+  const [cargando, setCargando] = useState(false);
+  const [enviando, setEnviando] = useState<"correo" | "chat" | null>(null);
+  const [enviadas, setEnviadas] = useState<string[]>([]);
+  const [error, setError] = useState("");
+
+  async function generar() {
+    setCargando(true);
+    setError("");
+    try {
+      const res = await fetch("/api/cotizaciones/generar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          quote_request_id: quote.id,
+          dirigida,
+          num_personas: Number(personas),
+          precio_unitario: Number(precio),
+          viaticos: Number(viaticos) || 0,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error generando");
+      setBorrador(data.cotizacion);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error");
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  async function enviar(via: "correo" | "chat") {
+    if (!borrador) return;
+    setEnviando(via);
+    setError("");
+    try {
+      const res = await fetch("/api/cotizaciones/enviar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cotizacion_id: borrador.id, via, correo: via === "correo" ? correo : undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error enviando");
+      setEnviadas((v) => [...v, via]);
+      onEnviada();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error");
+    } finally {
+      setEnviando(null);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4" onClick={onClose}>
+      <div className="card mt-6 w-full max-w-2xl p-5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className="text-[15px] font-semibold">
+            {borrador ? `Previsualización — Cotización S${borrador.folio}` : "Generar cotización"}
+          </h3>
+          <button onClick={onClose} className="chip">Cerrar ✕</button>
+        </div>
+
+        {!borrador && (
+          <div className="mt-4 flex flex-col gap-3">
+            <p className="text-[12px] text-[var(--text-3)]">
+              Curso: <strong>Primeros auxilios básicos</strong> · el descuento por grupo (21+ personas) se aplica solo.
+            </p>
+            <div>
+              <p className="label-xs">Dirigida a</p>
+              <input value={dirigida} onChange={(e) => setDirigida(e.target.value)} className="input w-full" placeholder="Empresa o persona" />
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <p className="label-xs">Personas</p>
+                <input value={personas} onChange={(e) => setPersonas(e.target.value)} className="input w-full" type="number" min={1} />
+              </div>
+              <div>
+                <p className="label-xs">Precio por persona (MXN)</p>
+                <input value={precio} onChange={(e) => setPrecio(e.target.value)} className="input w-full" type="number" min={1} />
+              </div>
+              <div>
+                <p className="label-xs">Viáticos (0 = sin viáticos)</p>
+                <input value={viaticos} onChange={(e) => setViaticos(e.target.value)} className="input w-full" type="number" min={0} />
+              </div>
+            </div>
+            {error && <p className="text-[13px] text-[#e5484d]">{error}</p>}
+            <button
+              onClick={generar}
+              disabled={cargando || !dirigida.trim() || !Number(personas) || !Number(precio)}
+              className="btn w-full justify-center disabled:opacity-50"
+            >
+              {cargando ? "Generando PDF…" : "Generar previsualización"}
+            </button>
+          </div>
+        )}
+
+        {borrador && (
+          <div className="mt-4 flex flex-col gap-3">
+            <p className="text-[13px] text-[var(--text-2)]">
+              Total: <strong>$ {borrador.total.toLocaleString("es-MX", { minimumFractionDigits: 2 })} MXN</strong>
+              {borrador.descuento_pct > 0 && ` (incluye ${borrador.descuento_pct}% de descuento por grupo)`}
+            </p>
+            <iframe src={borrador.pdf_url} className="h-[420px] w-full rounded-lg border border-[var(--border)] bg-white" title="Previsualización" />
+            <a href={borrador.pdf_url} target="_blank" className="text-[12px] text-[var(--accent)] underline">
+              Abrir el PDF en otra pestaña ↗
+            </a>
+
+            <div className="flex flex-col gap-2 border-t border-[var(--border)] pt-3">
+              <div className="flex items-center gap-2">
+                <input
+                  value={correo}
+                  onChange={(e) => setCorreo(e.target.value)}
+                  className="input flex-1"
+                  placeholder="correo@delcliente.com"
+                  type="email"
+                />
+                <button
+                  onClick={() => enviar("correo")}
+                  disabled={!!enviando || !correo.trim() || enviadas.includes("correo")}
+                  className="btn shrink-0 disabled:opacity-50"
+                >
+                  {enviadas.includes("correo") ? "✓ Enviada por correo" : enviando === "correo" ? "Enviando…" : "📧 Enviar por correo"}
+                </button>
+              </div>
+              <button
+                onClick={() => enviar("chat")}
+                disabled={!!enviando || enviadas.includes("chat") || !quote.conversation_id}
+                className="btn w-full justify-center disabled:opacity-50"
+              >
+                {enviadas.includes("chat")
+                  ? "✓ Enviada por el chat"
+                  : enviando === "chat"
+                    ? "Enviando…"
+                    : "💬 Enviar por el chat de la solicitud"}
+              </button>
+              {error && <p className="text-[13px] text-[#e5484d]">{error}</p>}
+              {enviadas.length > 0 && (
+                <p className="text-[12px] text-[#46b380]">
+                  Enviada ✓ — la solicitud quedó marcada como atendida.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function CotizacionesPage() {
   const router = useRouter();
   const supabase = useMemo(() => createBrowserSupabaseClient(), []);
   const [quotes, setQuotes] = useState<QuoteRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState<"pendiente" | "atendida" | "todas">("pendiente");
+  const [cotizando, setCotizando] = useState<QuoteRequest | null>(null);
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -52,7 +218,8 @@ export default function CotizacionesPage() {
           <h2 className="page-title">Cotizaciones</h2>
           <p className="page-sub">
             Personas que pidieron un curso para su empresa, escuela o grupo. El bot les pide sus datos y la IA
-            los junta aquí conforme los van dando.
+            los junta aquí conforme los van dando. Con &quot;Generar cotización&quot; sale el PDF oficial para
+            aprobar y enviar.
           </p>
         </div>
 
@@ -115,6 +282,18 @@ export default function CotizacionesPage() {
               </div>
 
               {q.notas && <p className="mt-3 text-[13px] text-[var(--text-2)]">{q.notas}</p>}
+
+              <div className="mt-3 border-t border-[var(--border)] pt-3">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCotizando(q);
+                  }}
+                  className="btn"
+                >
+                  📋 Generar cotización
+                </button>
+              </div>
             </div>
           ))}
           {visibles.length === 0 && (
@@ -126,6 +305,16 @@ export default function CotizacionesPage() {
           )}
         </div>
       </div>
+
+      {cotizando && (
+        <Cotizador
+          quote={cotizando}
+          onClose={() => setCotizando(null)}
+          onEnviada={() => {
+            setQuotes((prev) => prev.map((x) => (x.id === cotizando.id ? { ...x, status: "atendida" } : x)));
+          }}
+        />
+      )}
     </div>
   );
 }
