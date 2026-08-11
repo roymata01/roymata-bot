@@ -46,6 +46,6 @@ export const config = {
   matcher: [
     // api/alumnos queda fuera porque su POST es público (el formulario de los
     // alumnos); su GET verifica la sesión dentro de la propia ruta.
-    "/((?!api/webhooks|api/cron|api/tickets|api/campanas|api/finanzas|api/alumnos|_next/static|_next/image|favicon.ico|manifest.webmanifest|icon.png|icon-192.png|icon-512.png|apple-icon.png|logo-vita.png).*)",
+    "/((?!api/webhooks|api/cron|api/tickets|api/cotizaciones|api/campanas|api/finanzas|api/alumnos|_next/static|_next/image|favicon.ico|manifest.webmanifest|icon.png|icon-192.png|icon-512.png|apple-icon.png|logo-vita.png).*)",
   ],
 };
