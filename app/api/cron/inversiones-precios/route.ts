@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const maxDuration = 120;
 
-// Cron diario (vercel.json, 16:00 UTC = 10am CDMX): actualiza el precio actual
+// Cron diario (vercel.json, 21:00 UTC = 3pm CDMX, mercado ya cerrado): actualiza el precio actual
 // de cada posición con el precio de mercado en USD (Yahoo Finance) × tipo de
 // cambio USD/MXN del momento — así es como GBM valúa el SIC. No usamos los
 // tickers .MX porque en el SIC hay poca operación y los precios se quedan

@@ -139,7 +139,7 @@ function Socio() {
         <h1 className="mt-1 text-[20px] font-bold text-[#E7EDF7]">Portafolio de inversiones — Roy Mata</h1>
         <p className="text-[13px] text-[#7286A5]">
           {fechaInicio ? `Desde el ${new Date(fechaInicio + "T12:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })} · ` : ""}
-          precios actualizados en automático cada día hábil a las 10am · toca cualquier gráfica para el detalle
+          precios actualizados en automático cada día a las 3pm · toca cualquier gráfica para el detalle
         </p>
       </div>
 
