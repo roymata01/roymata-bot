@@ -90,6 +90,12 @@ export async function POST(req: NextRequest) {
     const cClave = col("CLAVE"), cCosto = col("COSTO"), cCant = col("CANTIDAD"),
       cPrecio = col("PRECIO ACTUAL"), cObj = col("OBJETIVO");
 
+    // Los precios los pone la bolsa (cron diario 10am) — el Sheets solo manda
+    // en cantidades, costos y objetivos. Una clave NUEVA sí toma el precio del
+    // Sheets como valor inicial hasta la siguiente actualización de mercado.
+    const { data: existentes } = await supabase.from("inversiones").select("clave");
+    const yaExiste = new Set((existentes || []).map((e) => e.clave));
+
     for (const f of filas.slice(iHeader + 1)) {
       const clave = (f[cClave] || "").trim().toUpperCase();
       if (!clave || clave.includes("FECHA")) break; // fin de la tabla de posiciones
@@ -97,17 +103,15 @@ export async function POST(req: NextRequest) {
       const costo = parseNum(f[cCosto] ?? "");
       const precio = parseNum(f[cPrecio] ?? "");
       if (cantidad == null || costo == null) continue; // fila sin datos (ej. TSMN vacía)
-      const { error } = await supabase.from("inversiones").upsert(
-        {
-          clave,
-          cantidad,
-          costo_promedio: costo,
-          precio_actual: precio ?? 0,
-          objetivo: (f[cObj] || "").trim() || null,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "clave" }
-      );
+      const base = {
+        cantidad,
+        costo_promedio: costo,
+        objetivo: (f[cObj] || "").trim() || null,
+        updated_at: new Date().toISOString(),
+      };
+      const { error } = yaExiste.has(clave)
+        ? await supabase.from("inversiones").update(base).eq("clave", clave)
+        : await supabase.from("inversiones").insert({ clave, ...base, precio_actual: precio ?? 0 });
       if (!error) actualizadas++;
     }
   }
