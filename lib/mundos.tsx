@@ -61,11 +61,12 @@ export const MUNDOS: Mundo[] = [
   {
     id: "personal",
     nombre: "Personal",
-    desc: "Tus finanzas y la facturación de tus tickets",
+    desc: "Tus finanzas, inversiones y facturación",
     color: "#16a34a",
     home: "/finanzas",
     items: [
       { href: "/finanzas", label: "Finanzas", icon: <WalletIcon /> },
+      { href: "/inversiones", label: "Inversiones", icon: <ChartIcon /> },
       { href: "/facturacion", label: "Facturación", icon: <ReceiptIcon /> },
     ],
   },
