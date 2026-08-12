@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // /datos-alumno es el formulario que los alumnos llenan sin cuenta.
-const PUBLIC_PATHS = ["/login", "/datos-alumno"];
+const PUBLIC_PATHS = ["/login", "/datos-alumno", "/inversiones-socio"];
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
