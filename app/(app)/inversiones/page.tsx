@@ -180,8 +180,17 @@ export default function InversionesPage() {
       valor += d.valor;
     }
     const ganancia = valor - invertido;
-    return { invertido, valor, ganancia, rendimiento: invertido > 0 ? (ganancia / invertido) * 100 : 0 };
-  }, [posiciones]);
+    const rendimiento = invertido > 0 ? (ganancia / invertido) * 100 : 0;
+    // Rendimiento anualizado (CAGR aproximado): asume el capital desde la fecha
+    // de inicio, sin separar aportaciones — referencia rápida, no cifra fiscal.
+    let anualizado: number | null = null;
+    let dias = 0;
+    if (fechaInicio && invertido > 0 && valor > 0) {
+      dias = Math.max(1, Math.round((Date.now() - new Date(fechaInicio + "T12:00:00").getTime()) / 86400000));
+      if (dias >= 30) anualizado = (Math.pow(valor / invertido, 365 / dias) - 1) * 100;
+    }
+    return { invertido, valor, ganancia, rendimiento, anualizado, dias };
+  }, [posiciones, fechaInicio]);
 
   const porValor = useMemo(
     () => [...posiciones].map((p) => ({ p, ...derivados(p) })).sort((a, b) => b.valor - a.valor),
@@ -259,7 +268,7 @@ export default function InversionesPage() {
         {msg && <p className="text-[13px] text-[var(--text-2)]">{msg}</p>}
 
         {/* Totales con glow */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
           <div className="card p-4" style={{ boxShadow: "0 0 28px rgba(76,125,240,0.10)" }}>
             <p className="label-xs">Total invertido</p>
             <p className="num mt-1 text-[22px] font-bold text-[var(--text)]">{mxn(totales.invertido)}</p>
@@ -280,6 +289,23 @@ export default function InversionesPage() {
           <div className="card p-4">
             <p className="label-xs">Posiciones</p>
             <p className="num mt-1 text-[22px] font-bold text-[var(--text)]">{posiciones.length}</p>
+          </div>
+          <div
+            className="card p-4"
+            title="Aproximado: proyecta tu rendimiento acumulado a tasa anual, contando desde tu fecha de inicio"
+            style={{ boxShadow: `0 0 28px ${(totales.anualizado ?? 0) >= 0 ? "rgba(43,212,138,0.10)" : "rgba(255,107,107,0.10)"}` }}
+          >
+            <p className="label-xs">Anualizado</p>
+            {totales.anualizado === null ? (
+              <p className="num mt-1 text-[22px] font-bold text-[var(--text-3)]">—</p>
+            ) : (
+              <>
+                <p className="num mt-1 text-[22px] font-bold" style={{ color: totales.anualizado >= 0 ? VERDE : ROJO }}>
+                  {pct(totales.anualizado)}
+                </p>
+                <p className="text-[11px] text-[var(--text-3)]">en {totales.dias} días</p>
+              </>
+            )}
           </div>
         </div>
 
