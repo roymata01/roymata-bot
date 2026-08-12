@@ -11,7 +11,12 @@ export type DatosCotizacion = {
   precioUnitario: number; // por participante, sin IVA
   viaticos: number; // 0 = sin fila de viáticos
   notaViaticos?: string;
+  instructorRoy?: boolean; // regla de Roy: si imparte él, +$5,000 fijos
+  extraDescripcion?: string; // especificación adicional libre (opcional)
+  extraMonto?: number;
 };
+
+export const CARGO_INSTRUCTOR_ROY = 5000;
 
 const CURSO_BASICO = {
   descripcionTabla: "Curso primeros auxilios básicos en adultos",
@@ -48,11 +53,15 @@ const mxn = (n: number) =>
   "$ " + n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " MXN";
 const num = (n: number) => n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export function calcularTotales(d: Pick<DatosCotizacion, "numPersonas" | "precioUnitario" | "viaticos">) {
+export function calcularTotales(
+  d: Pick<DatosCotizacion, "numPersonas" | "precioUnitario" | "viaticos" | "instructorRoy" | "extraMonto">
+) {
   const subtotalCurso = d.numPersonas * d.precioUnitario;
   const pct = descuentoPorGrupo(d.numPersonas);
   const descuento = Math.round(subtotalCurso * (pct / 100) * 100) / 100;
-  const total = subtotalCurso - descuento + (d.viaticos || 0);
+  const instructor = d.instructorRoy ? CARGO_INSTRUCTOR_ROY : 0;
+  const extra = d.extraMonto || 0;
+  const total = subtotalCurso - descuento + (d.viaticos || 0) + instructor + extra;
   return { subtotalCurso, pct, descuento, total };
 }
 
@@ -68,6 +77,26 @@ export function htmlCotizacion(d: DatosCotizacion): string {
   const curso = CURSO_BASICO;
   const { pct, descuento, total } = calcularTotales(d);
   const vence = new Date(d.fecha.getTime() + 30 * 86400000);
+
+  const filaInstructor = d.instructorRoy
+    ? `<tr>
+        <td>Instructor: TUM I. Rodrigo Mata Santillana<br /><span class="sub">Curso impartido personalmente por el Director de VITA RESCUE</span></td>
+        <td class="num">1 Unidades</td>
+        <td class="num">${num(CARGO_INSTRUCTOR_ROY)}</td>
+        <td class="num">—</td>
+        <td class="num">${mxn(CARGO_INSTRUCTOR_ROY)}</td>
+      </tr>`
+    : "";
+
+  const filaExtra = d.extraDescripcion && (d.extraMonto || 0) > 0
+    ? `<tr>
+        <td>${d.extraDescripcion}</td>
+        <td class="num">1 Unidades</td>
+        <td class="num">${num(d.extraMonto!)}</td>
+        <td class="num">—</td>
+        <td class="num">${mxn(d.extraMonto!)}</td>
+      </tr>`
+    : "";
 
   const filaViaticos = d.viaticos > 0
     ? `<tr>
@@ -177,6 +206,8 @@ export function htmlCotizacion(d: DatosCotizacion): string {
           <td class="num">${mxn(d.numPersonas * d.precioUnitario)}</td>
         </tr>
         ${filaDescuento}
+        ${filaInstructor}
+        ${filaExtra}
         ${filaViaticos}
       </tbody>
     </table>

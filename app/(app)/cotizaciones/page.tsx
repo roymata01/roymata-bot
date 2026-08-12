@@ -23,12 +23,15 @@ type Borrador = {
 
 // Flujo: Generar cotización → formulario prellenado → previsualización del PDF
 // → Roy aprueba y la envía por correo y/o por el mismo chat de la solicitud.
-function Cotizador({ quote, onClose, onEnviada }: { quote: QuoteRequest; onClose: () => void; onEnviada: () => void }) {
-  const [dirigida, setDirigida] = useState(quote.organizacion || quote.nombre || quote.contact?.display_name || "");
-  const [personas, setPersonas] = useState(quote.num_personas ? String(quote.num_personas) : "");
+function Cotizador({ quote, onClose, onEnviada }: { quote: QuoteRequest | null; onClose: () => void; onEnviada: () => void }) {
+  const [dirigida, setDirigida] = useState(quote?.organizacion || quote?.nombre || quote?.contact?.display_name || "");
+  const [personas, setPersonas] = useState(quote?.num_personas ? String(quote.num_personas) : "");
   const [precio, setPrecio] = useState("850");
   const [viaticos, setViaticos] = useState("0");
-  const [correo, setCorreo] = useState(quote.correo || "");
+  const [instructorRoy, setInstructorRoy] = useState(false);
+  const [extraDesc, setExtraDesc] = useState("");
+  const [extraMonto, setExtraMonto] = useState("");
+  const [correo, setCorreo] = useState(quote?.correo || "");
   const [borrador, setBorrador] = useState<Borrador | null>(null);
   const [cargando, setCargando] = useState(false);
   const [enviando, setEnviando] = useState<"correo" | "chat" | null>(null);
@@ -43,11 +46,14 @@ function Cotizador({ quote, onClose, onEnviada }: { quote: QuoteRequest; onClose
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          quote_request_id: quote.id,
+          quote_request_id: quote?.id || null,
           dirigida,
           num_personas: Number(personas),
           precio_unitario: Number(precio),
           viaticos: Number(viaticos) || 0,
+          instructor_roy: instructorRoy,
+          extra_descripcion: extraDesc,
+          extra_monto: Number(extraMonto) || 0,
         }),
       });
       const data = await res.json();
@@ -114,6 +120,23 @@ function Cotizador({ quote, onClose, onEnviada }: { quote: QuoteRequest; onClose
                 <input value={viaticos} onChange={(e) => setViaticos(e.target.value)} className="input w-full" type="number" min={0} />
               </div>
             </div>
+
+            <label className="flex cursor-pointer items-center gap-2 text-[13px]">
+              <input type="checkbox" checked={instructorRoy} onChange={(e) => setInstructorRoy(e.target.checked)} />
+              Instructor: TUM I. Rodrigo Mata (Roy) — se agregan <strong>$5,000</strong> a la cotización
+            </label>
+
+            <div className="grid grid-cols-[1fr_120px] gap-3">
+              <div>
+                <p className="label-xs">Especificación extra (opcional)</p>
+                <input value={extraDesc} onChange={(e) => setExtraDesc(e.target.value)} className="input w-full" placeholder="Ej. Maniquíes adicionales, curso en fin de semana..." />
+              </div>
+              <div>
+                <p className="label-xs">Monto extra</p>
+                <input value={extraMonto} onChange={(e) => setExtraMonto(e.target.value)} className="input w-full" type="number" min={0} placeholder="0" />
+              </div>
+            </div>
+
             {error && <p className="text-[13px] text-[#e5484d]">{error}</p>}
             <button
               onClick={generar}
@@ -155,14 +178,16 @@ function Cotizador({ quote, onClose, onEnviada }: { quote: QuoteRequest; onClose
               </div>
               <button
                 onClick={() => enviar("chat")}
-                disabled={!!enviando || enviadas.includes("chat") || !quote.conversation_id}
+                disabled={!!enviando || enviadas.includes("chat") || !quote?.conversation_id}
                 className="btn w-full justify-center disabled:opacity-50"
               >
-                {enviadas.includes("chat")
-                  ? "✓ Enviada por el chat"
-                  : enviando === "chat"
-                    ? "Enviando…"
-                    : "💬 Enviar por el chat de la solicitud"}
+                {!quote?.conversation_id
+                  ? "💬 Sin chat de origen (cotización manual)"
+                  : enviadas.includes("chat")
+                    ? "✓ Enviada por el chat"
+                    : enviando === "chat"
+                      ? "Enviando…"
+                      : "💬 Enviar por el chat de la solicitud"}
               </button>
               {error && <p className="text-[13px] text-[#e5484d]">{error}</p>}
               {enviadas.length > 0 && (
@@ -185,6 +210,7 @@ export default function CotizacionesPage() {
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState<"pendiente" | "atendida" | "todas">("pendiente");
   const [cotizando, setCotizando] = useState<QuoteRequest | null>(null);
+  const [manualAbierta, setManualAbierta] = useState(false);
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -222,6 +248,10 @@ export default function CotizacionesPage() {
             aprobar y enviar.
           </p>
         </div>
+
+        <button onClick={() => setManualAbierta(true)} className="btn w-fit">
+          ➕ Generar cotización manual
+        </button>
 
         <div className="flex gap-2">
           {(["pendiente", "atendida", "todas"] as const).map((f) => (
@@ -306,12 +336,16 @@ export default function CotizacionesPage() {
         </div>
       </div>
 
+      {manualAbierta && (
+        <Cotizador quote={null} onClose={() => setManualAbierta(false)} onEnviada={() => {}} />
+      )}
+
       {cotizando && (
         <Cotizador
           quote={cotizando}
           onClose={() => setCotizando(null)}
           onEnviada={() => {
-            setQuotes((prev) => prev.map((x) => (x.id === cotizando.id ? { ...x, status: "atendida" } : x)));
+            setQuotes((prev) => prev.map((x) => (x.id === cotizando?.id ? { ...x, status: "atendida" } : x)));
           }}
         />
       )}

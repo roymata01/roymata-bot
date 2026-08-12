@@ -20,9 +20,8 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   }
 
-  const { quote_request_id, dirigida, num_personas, precio_unitario, viaticos } = await req
-    .json()
-    .catch(() => ({}));
+  const { quote_request_id, dirigida, num_personas, precio_unitario, viaticos, instructor_roy, extra_descripcion, extra_monto } =
+    await req.json().catch(() => ({}));
 
   const personas = Number(num_personas);
   const precio = Number(precio_unitario);
@@ -45,7 +44,16 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
   const folio = Math.max(FOLIO_INICIAL, (ultimo?.folio || 0) + 1);
 
-  const { pct, total } = calcularTotales({ numPersonas: personas, precioUnitario: precio, viaticos: viat });
+  const conInstructor = Boolean(instructor_roy);
+  const extraDesc = String(extra_descripcion || "").trim().slice(0, 160);
+  const extraNum = Number(extra_monto) || 0;
+  const { pct, total } = calcularTotales({
+    numPersonas: personas,
+    precioUnitario: precio,
+    viaticos: viat,
+    instructorRoy: conInstructor,
+    extraMonto: extraDesc ? extraNum : 0,
+  });
 
   const html = htmlCotizacion({
     folio,
@@ -54,6 +62,9 @@ export async function POST(req: NextRequest) {
     numPersonas: personas,
     precioUnitario: precio,
     viaticos: viat,
+    instructorRoy: conInstructor,
+    extraDescripcion: extraDesc || undefined,
+    extraMonto: extraDesc ? extraNum : 0,
   });
 
   let pdf: Buffer;
