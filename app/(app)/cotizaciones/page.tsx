@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { ChannelBadge } from "@/components/ChannelBadge";
-import type { QuoteRequest } from "@/types/database";
+import type { CotizacionEmitida, QuoteRequest } from "@/types/database";
 
 const CAMPOS: { key: keyof QuoteRequest; label: string }[] = [
   { key: "organizacion", label: "Empresa / Escuela" },
@@ -20,6 +20,75 @@ type Borrador = {
   total: number;
   descuento_pct: number;
 };
+
+// Seguimiento de una cotización ya mandada: enviada → atendida → resuelta.
+const ESTADOS_SEGUIMIENTO = ["enviada", "atendida", "resuelta"] as const;
+const ESTILO_ESTADO: Record<string, { punto: string; chip: string }> = {
+  borrador: { punto: "bg-[var(--text-3)]", chip: "border-[var(--border)] bg-transparent text-[var(--text-3)]" },
+  enviada: { punto: "bg-[var(--accent)]", chip: "border-[var(--accent)]/25 bg-[var(--accent)]/10 text-[var(--accent)]" },
+  atendida: { punto: "bg-[#f0b429]", chip: "border-[#f0b429]/25 bg-[#f0b429]/10 text-[#f0b429]" },
+  resuelta: { punto: "bg-[#46b380]", chip: "border-[#46b380]/25 bg-[#46b380]/10 text-[#46b380]" },
+};
+
+// Fila de una cotización emitida: folio + PDF + vías + botones de seguimiento.
+function CotizacionFila({ cot, onEstado }: { cot: CotizacionEmitida; onEstado: (id: string, estado: string) => Promise<string | null> }) {
+  const [cambiando, setCambiando] = useState(false);
+  const [error, setError] = useState("");
+
+  async function cambiar(estado: string) {
+    if (estado === cot.estado || cambiando) return;
+    setCambiando(true);
+    setError("");
+    const err = await onEstado(cot.id, estado);
+    if (err) setError(err);
+    setCambiando(false);
+  }
+
+  return (
+    <div className="rounded-lg border border-[var(--border)] p-3" onClick={(e) => e.stopPropagation()}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <p className="num text-[13px] font-semibold">S{cot.folio}</p>
+          <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-medium ${ESTILO_ESTADO[cot.estado].chip}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${ESTILO_ESTADO[cot.estado].punto}`} />
+            {cot.estado.charAt(0).toUpperCase() + cot.estado.slice(1)}
+          </span>
+          {cot.enviada_por.map((v) => (
+            <span key={v} className="text-[11px] text-[var(--text-3)]">{v === "correo" ? "📧 correo" : "💬 chat"}</span>
+          ))}
+        </div>
+        <a href={cot.pdf_url} target="_blank" className="text-[12px] text-[var(--accent)] underline">
+          Ver PDF ↗
+        </a>
+      </div>
+      <p className="mt-1 text-[12px] text-[var(--text-3)]">
+        {cot.dirigida} · {cot.num_personas} persona{cot.num_personas === 1 ? "" : "s"} · $
+        {Number(cot.total).toLocaleString("es-MX", { minimumFractionDigits: 2 })} MXN ·{" "}
+        {new Date(cot.created_at).toLocaleDateString("es-MX", { day: "numeric", month: "short" })}
+      </p>
+      {cot.estado !== "borrador" && (
+        <div className="mt-2 flex gap-1.5">
+          {ESTADOS_SEGUIMIENTO.map((e) => (
+            <button
+              key={e}
+              onClick={() => cambiar(e)}
+              disabled={cambiando}
+              className={`rounded-md border px-2.5 py-1 text-[11px] font-medium transition disabled:opacity-50 ${
+                cot.estado === e ? ESTILO_ESTADO[e].chip : "border-[var(--border)] text-[var(--text-3)] hover:border-[var(--border-strong)] hover:text-[var(--text-2)]"
+              }`}
+            >
+              {e.charAt(0).toUpperCase() + e.slice(1)}
+            </button>
+          ))}
+        </div>
+      )}
+      {cot.estado === "borrador" && (
+        <p className="mt-2 text-[11px] text-[var(--text-3)]">Generada pero sin enviar todavía.</p>
+      )}
+      {error && <p className="mt-2 text-[12px] text-[#e5484d]">{error}</p>}
+    </div>
+  );
+}
 
 // Flujo: Generar cotización → formulario prellenado → previsualización del PDF
 // → Roy aprueba y la envía por correo y/o por el mismo chat de la solicitud.
@@ -207,17 +276,20 @@ export default function CotizacionesPage() {
   const router = useRouter();
   const supabase = useMemo(() => createBrowserSupabaseClient(), []);
   const [quotes, setQuotes] = useState<QuoteRequest[]>([]);
+  const [emitidas, setEmitidas] = useState<CotizacionEmitida[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState<"pendiente" | "atendida" | "todas">("pendiente");
+  const [filtroEmitidas, setFiltroEmitidas] = useState<"todas" | "enviada" | "atendida" | "resuelta">("todas");
   const [cotizando, setCotizando] = useState<QuoteRequest | null>(null);
   const [manualAbierta, setManualAbierta] = useState(false);
 
   const load = useCallback(async () => {
-    const { data } = await supabase
-      .from("quote_requests")
-      .select("*, contact:contacts(*)")
-      .order("created_at", { ascending: false });
+    const [{ data }, { data: cots }] = await Promise.all([
+      supabase.from("quote_requests").select("*, contact:contacts(*)").order("created_at", { ascending: false }),
+      supabase.from("cotizaciones_emitidas").select("*").order("folio", { ascending: false }),
+    ]);
     setQuotes((data as QuoteRequest[]) ?? []);
+    setEmitidas((cots as CotizacionEmitida[]) ?? []);
     setLoading(false);
   }, [supabase]);
 
@@ -232,8 +304,26 @@ export default function CotizacionesPage() {
     setQuotes((prev) => prev.map((x) => (x.id === q.id ? { ...x, status: next } : x)));
   }
 
+  async function cambiarEstado(id: string, estado: string): Promise<string | null> {
+    const res = await fetch("/api/cotizaciones/estado", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cotizacion_id: id, estado }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return data.error || "No se pudo cambiar el estado.";
+    setEmitidas((prev) => prev.map((c) => (c.id === id ? { ...c, estado: estado as CotizacionEmitida["estado"] } : c)));
+    return null;
+  }
+
   const visibles = quotes.filter((q) => filtro === "todas" || q.status === filtro);
   const pendientes = quotes.filter((q) => q.status === "pendiente").length;
+  const emitidasPorSolicitud = new Map<string, CotizacionEmitida[]>();
+  for (const c of emitidas) {
+    if (!c.quote_request_id) continue;
+    emitidasPorSolicitud.set(c.quote_request_id, [...(emitidasPorSolicitud.get(c.quote_request_id) || []), c]);
+  }
+  const emitidasVisibles = emitidas.filter((c) => filtroEmitidas === "todas" || c.estado === filtroEmitidas);
 
   if (loading) return <div className="p-6 text-[13px] text-[var(--text-3)]">Cargando...</div>;
 
@@ -313,6 +403,15 @@ export default function CotizacionesPage() {
 
               {q.notas && <p className="mt-3 text-[13px] text-[var(--text-2)]">{q.notas}</p>}
 
+              {(emitidasPorSolicitud.get(q.id) || []).length > 0 && (
+                <div className="mt-3 flex flex-col gap-2 border-t border-[var(--border)] pt-3">
+                  <p className="label-xs">Cotizaciones de esta solicitud</p>
+                  {(emitidasPorSolicitud.get(q.id) || []).map((c) => (
+                    <CotizacionFila key={c.id} cot={c} onEstado={cambiarEstado} />
+                  ))}
+                </div>
+              )}
+
               <div className="mt-3 border-t border-[var(--border)] pt-3">
                 <button
                   onClick={(e) => {
@@ -334,16 +433,55 @@ export default function CotizacionesPage() {
             </p>
           )}
         </div>
+
+        <div className="flex flex-col gap-3 border-t border-[var(--border)] pt-5">
+          <div>
+            <h3 className="text-[15px] font-semibold">Cotizaciones emitidas</h3>
+            <p className="page-sub">
+              Todas las que has generado (con o sin chat), con su PDF y su seguimiento: enviada → atendida → resuelta.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            {(["todas", "enviada", "atendida", "resuelta"] as const).map((f) => {
+              const n = f === "todas" ? emitidas.length : emitidas.filter((c) => c.estado === f).length;
+              return (
+                <button
+                  key={f}
+                  onClick={() => setFiltroEmitidas(f)}
+                  className={`chip ${filtroEmitidas === f ? "!border-[var(--accent)]/40 !text-[var(--text-1)]" : ""}`}
+                >
+                  {f.charAt(0).toUpperCase() + f.slice(1)} ({n})
+                </button>
+              );
+            })}
+          </div>
+          {emitidasVisibles.map((c) => (
+            <CotizacionFila key={c.id} cot={c} onEstado={cambiarEstado} />
+          ))}
+          {emitidasVisibles.length === 0 && (
+            <p className="text-[13px] text-[var(--text-3)]">Ninguna cotización en este estado.</p>
+          )}
+        </div>
       </div>
 
       {manualAbierta && (
-        <Cotizador quote={null} onClose={() => setManualAbierta(false)} onEnviada={() => {}} />
+        <Cotizador
+          quote={null}
+          onClose={() => {
+            setManualAbierta(false);
+            load();
+          }}
+          onEnviada={() => {}}
+        />
       )}
 
       {cotizando && (
         <Cotizador
           quote={cotizando}
-          onClose={() => setCotizando(null)}
+          onClose={() => {
+            setCotizando(null);
+            load();
+          }}
           onEnviada={() => {
             setQuotes((prev) => prev.map((x) => (x.id === cotizando?.id ? { ...x, status: "atendida" } : x)));
           }}

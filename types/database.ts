@@ -124,6 +124,22 @@ export interface QuoteRequest {
   contact?: Contact;
 }
 
+export interface CotizacionEmitida {
+  id: string;
+  folio: number;
+  quote_request_id: string | null;
+  dirigida: string;
+  num_personas: number;
+  precio_unitario: number;
+  viaticos: number;
+  descuento_pct: number;
+  total: number;
+  pdf_url: string;
+  estado: "borrador" | "enviada" | "atendida" | "resuelta";
+  enviada_por: string[];
+  created_at: string;
+}
+
 export interface CommentInvite {
   id: string;
   channel: Channel;
