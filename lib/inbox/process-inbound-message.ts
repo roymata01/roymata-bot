@@ -4,6 +4,7 @@ import { sendInviteFollowUpIfFirstReply } from "@/lib/inbox/send-invite-follow-u
 import { sendKeywordReplyIfMatch } from "@/lib/inbox/handle-keyword-reply";
 import { handleCampaignReply } from "@/lib/inbox/handle-campaign-reply";
 import { checkEscalation } from "@/lib/ai/check-escalation";
+import { royFollowsInstagramUser } from "@/lib/meta/check-roy-follows";
 import { classifyMessage } from "@/lib/ai/classify-message";
 import { maybeCaptureQuoteRequest } from "@/lib/ai/extract-quote";
 import { escalateConversation } from "@/lib/ai/escalate-conversation";
@@ -28,6 +29,12 @@ export async function processInboundMessage(msg: InboundMessage) {
   // esté pausada la IA o no — son seguridad/organización, no "la IA hablando".
   const escalatedByKeyword = await checkEscalation(conversation.id, msg.content);
   if (escalatedByKeyword) return;
+
+  // Regla de Roy (2026-08-13): si Roy SIGUE a la persona en Instagram, es de su
+  // círculo — el bot no se activa para nada (ni keyword, ni seguimiento, ni IA);
+  // el mensaje solo queda guardado para que Roy conteste él. La escalación de
+  // emergencias (arriba) sí corre incluso con amigos, por seguridad.
+  if (msg.channel === "instagram" && (await royFollowsInstagramUser(msg.externalId))) return;
 
   // Pausa humana antes de cualquier respuesta automática: nadie contesta en 1
   // segundo. La escalación de emergencias ya corrió (esa sí es instantánea).
@@ -65,10 +72,11 @@ export async function processInboundMessage(msg: InboundMessage) {
     await escalateConversation(conversation.id);
     return;
   }
-  // Regla de Roy: en la página de Facebook el bot contesta TODO (ahí escribe
-  // público del negocio, no amigos) y encamina hacia el curso. En Instagram los
-  // mensajes personales se quedan callados para que Roy conteste él.
-  if (category === "personal" && msg.channel !== "messenger") return;
+  // Los mensajes personales se quedan callados en TODOS los canales para que
+  // Roy conteste él. (La excepción "Messenger contesta todo" se quitó el
+  // 2026-08-13 a pedido de Roy: el bot le estaba contestando conversaciones
+  // personales.)
+  if (category === "personal") return;
 
   // Cotizaciones grupales (empresa/escuela): detecta y junta los datos del
   // cliente en quote_requests para el apartado "Cotizaciones" del panel.
