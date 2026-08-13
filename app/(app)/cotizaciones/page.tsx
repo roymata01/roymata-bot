@@ -66,25 +66,25 @@ function CotizacionFila({ cot, onEstado }: { cot: CotizacionEmitida; onEstado: (
         {Number(cot.total).toLocaleString("es-MX", { minimumFractionDigits: 2 })} MXN ·{" "}
         {new Date(cot.created_at).toLocaleDateString("es-MX", { day: "numeric", month: "short" })}
       </p>
-      {cot.estado !== "borrador" && (
-        <div className="mt-2 flex gap-1.5">
-          {ESTADOS_SEGUIMIENTO.map((e) => (
-            <button
-              key={e}
-              onClick={() => cambiar(e)}
-              disabled={cambiando}
-              className={`rounded-md border px-2.5 py-1 text-[11px] font-medium transition disabled:opacity-50 ${
-                cot.estado === e ? ESTILO_ESTADO[e].chip : "border-[var(--border)] text-[var(--text-3)] hover:border-[var(--border-strong)] hover:text-[var(--text-2)]"
-              }`}
-            >
-              {e.charAt(0).toUpperCase() + e.slice(1)}
-            </button>
-          ))}
-        </div>
-      )}
       {cot.estado === "borrador" && (
-        <p className="mt-2 text-[11px] text-[var(--text-3)]">Generada pero sin enviar todavía.</p>
+        <p className="mt-2 text-[11px] text-[var(--text-3)]">
+          Generada sin envío registrado — si ya la mandaste por fuera, márcala aquí abajo.
+        </p>
       )}
+      <div className="mt-2 flex gap-1.5">
+        {ESTADOS_SEGUIMIENTO.map((e) => (
+          <button
+            key={e}
+            onClick={() => cambiar(e)}
+            disabled={cambiando}
+            className={`rounded-md border px-2.5 py-1 text-[11px] font-medium transition disabled:opacity-50 ${
+              cot.estado === e ? ESTILO_ESTADO[e].chip : "border-[var(--border)] text-[var(--text-3)] hover:border-[var(--border-strong)] hover:text-[var(--text-2)]"
+            }`}
+          >
+            {e.charAt(0).toUpperCase() + e.slice(1)}
+          </button>
+        ))}
+      </div>
       {error && <p className="mt-2 text-[12px] text-[#e5484d]">{error}</p>}
     </div>
   );
