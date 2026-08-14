@@ -5,7 +5,7 @@ export const maxDuration = 60;
 
 // A quién se le avisa (el WhatsApp personal de Roy, formato 52 + 10 dígitos).
 // Editable también sin deploy vía env ROY_WHATSAPP_ALERTAS en Vercel.
-const NUMERO_ROY = process.env.ROY_WHATSAPP_ALERTAS || "";
+const NUMERO_ROY = process.env.ROY_WHATSAPP_ALERTAS || "522228067240";
 
 // Cron (cada 5 min): avisa a Roy por WhatsApp de solicitudes de cotización
 // NUEVAS — tanto de chats (IG/FB/WA) como del formulario público /cotizar —
