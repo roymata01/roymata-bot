@@ -110,8 +110,8 @@ export interface Ticket {
 
 export interface QuoteRequest {
   id: string;
-  conversation_id: string;
-  contact_id: string;
+  conversation_id: string | null; // null = solicitud desde la página web
+  contact_id: string | null;
   nombre: string | null;
   organizacion: string | null;
   num_personas: number | null;

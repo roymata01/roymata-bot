@@ -359,9 +359,9 @@ export default function CotizacionesPage() {
           {visibles.map((q) => (
             <div
               key={q.id}
-              onClick={() => router.push(`/inbox?c=${q.conversation_id}`)}
-              className="card cursor-pointer p-4 transition hover:border-[var(--border-strong)]"
-              title="Ver conversación"
+              onClick={() => q.conversation_id && router.push(`/inbox?c=${q.conversation_id}`)}
+              className={`card p-4 transition ${q.conversation_id ? "cursor-pointer hover:border-[var(--border-strong)]" : ""}`}
+              title={q.conversation_id ? "Ver conversación" : "Solicitud desde la página web (sin chat)"}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex flex-col gap-0.5">
@@ -369,7 +369,13 @@ export default function CotizacionesPage() {
                     <p className="text-[14px] font-semibold">
                       {q.nombre || q.contact?.display_name || "Sin nombre"}
                     </p>
-                    {q.contact && <ChannelBadge channel={q.contact.channel} />}
+                    {q.contact ? (
+                      <ChannelBadge channel={q.contact.channel} />
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] px-1.5 py-0.5 text-[10px] text-[var(--text-3)]">
+                        🌐 Página web
+                      </span>
+                    )}
                   </div>
                   <p className="text-[11px] text-[var(--text-3)]">
                     {q.contact?.display_name ? `${q.contact.display_name} · ` : ""}
