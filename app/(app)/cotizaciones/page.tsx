@@ -94,7 +94,7 @@ function CotizacionFila({ cot, onEstado }: { cot: CotizacionEmitida; onEstado: (
 // → Roy aprueba y la envía por correo y/o por el mismo chat de la solicitud.
 function Cotizador({ quote, onClose, onEnviada }: { quote: QuoteRequest | null; onClose: () => void; onEnviada: () => void }) {
   const [dirigida, setDirigida] = useState(quote?.organizacion || quote?.nombre || quote?.contact?.display_name || "");
-  const [personas, setPersonas] = useState(quote?.num_personas ? String(quote.num_personas) : "");
+  const [personas, setPersonas] = useState(quote?.num_personas && quote.num_personas >= 10 ? String(quote.num_personas) : "");
   const [precio, setPrecio] = useState("850");
   const [viaticos, setViaticos] = useState("0");
   const [instructorRoy, setInstructorRoy] = useState(false);
@@ -178,7 +178,16 @@ function Cotizador({ quote, onClose, onEnviada }: { quote: QuoteRequest | null; 
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <p className="label-xs">Personas</p>
-                <input value={personas} onChange={(e) => setPersonas(e.target.value)} className="input w-full" type="number" min={1} />
+                <select value={personas} onChange={(e) => setPersonas(e.target.value)} className="input w-full">
+                  <option value="">Selecciona…</option>
+                  {Array.from({ length: 111 }, (_, i) => i + 10).map((n) => (
+                    <option key={n} value={n}>{n} personas</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[11px] leading-snug text-[var(--text-3)]">
+                  Mínimo 10 personas para impartir un curso privado. Si buscan para una sola
+                  persona: que estén atentos a los comunicados de VITA para cursos a todo público.
+                </p>
               </div>
               <div>
                 <p className="label-xs">Precio por persona (MXN)</p>
