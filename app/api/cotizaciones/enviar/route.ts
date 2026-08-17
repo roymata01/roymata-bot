@@ -51,6 +51,8 @@ export async function POST(req: NextRequest) {
       // Las respuestas del cliente entran por Resend Inbound y se ligan a esta
       // cotización por el folio (hilo en el panel + copia reenviada a Roy).
       replyTo: `cotizacion-s${cot.folio}@respuestas.vitarescue.com.mx`,
+      // Ancla del hilo: todos los correos de este folio quedan agrupados
+      headers: { References: `<cotizacion-s${cot.folio}@vitarescue.com.mx>` },
       to: destino,
       subject: `Cotización S${cot.folio} — Curso de primeros auxilios · VITA RESCUE`,
       attachments: [{ filename: `Cotizacion-S${cot.folio}-VITA-RESCUE.pdf`, content: pdfBuf }],
