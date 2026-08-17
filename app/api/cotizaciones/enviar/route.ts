@@ -48,6 +48,9 @@ export async function POST(req: NextRequest) {
     const resend = new Resend(process.env.RESEND_API_KEY);
     const { error: mailErr } = await resend.emails.send({
       from: "VITA RESCUE <contacto@vitarescue.com.mx>",
+      // Las respuestas del cliente llegan al correo de Roy (no se pierden en
+      // el buzón del dominio, que nadie revisa a diario).
+      replyTo: "roymataparamedic@gmail.com",
       to: destino,
       subject: `Cotización S${cot.folio} — Curso de primeros auxilios · VITA RESCUE`,
       attachments: [{ filename: `Cotizacion-S${cot.folio}-VITA-RESCUE.pdf`, content: pdfBuf }],
