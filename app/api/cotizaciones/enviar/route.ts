@@ -48,9 +48,9 @@ export async function POST(req: NextRequest) {
     const resend = new Resend(process.env.RESEND_API_KEY);
     const { error: mailErr } = await resend.emails.send({
       from: "VITA RESCUE <contacto@vitarescue.com.mx>",
-      // Las respuestas del cliente llegan al correo de Roy (no se pierden en
-      // el buzón del dominio, que nadie revisa a diario).
-      replyTo: "roymataparamedic@gmail.com",
+      // Las respuestas del cliente entran por Resend Inbound y se ligan a esta
+      // cotización por el folio (hilo en el panel + copia reenviada a Roy).
+      replyTo: `cotizacion-s${cot.folio}@respuestas.vitarescue.com.mx`,
       to: destino,
       subject: `Cotización S${cot.folio} — Curso de primeros auxilios · VITA RESCUE`,
       attachments: [{ filename: `Cotizacion-S${cot.folio}-VITA-RESCUE.pdf`, content: pdfBuf }],
@@ -69,6 +69,22 @@ export async function POST(req: NextRequest) {
     if (mailErr) {
       console.error("Error enviando cotización por correo:", mailErr);
       return NextResponse.json({ error: "El correo no se pudo enviar." }, { status: 502 });
+    }
+
+    // Registro del hilo: lo que salió por correo queda en cotizacion_correos
+    // (si la tabla aún no existe, no frena el envío).
+    try {
+      await supabase.from("cotizacion_correos").insert({
+        cotizacion_id: cot.id,
+        folio: cot.folio,
+        direction: "out",
+        from_email: "contacto@vitarescue.com.mx",
+        to_email: destino,
+        subject: `Cotización S${cot.folio} — Curso de primeros auxilios · VITA RESCUE`,
+        body_text: `Cotización S${cot.folio} enviada con el PDF adjunto a ${destino}.`,
+      });
+    } catch (e) {
+      console.error("Registro de hilo de cotización:", e);
     }
 
     // Aviso por WhatsApp al cliente (si dejó teléfono en su solicitud): le
