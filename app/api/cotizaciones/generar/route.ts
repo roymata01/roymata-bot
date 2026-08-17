@@ -13,7 +13,11 @@ const FOLIO_INICIAL = 11027; // S11026 fue el ejemplo aprobado por Roy
 export async function POST(req: NextRequest) {
   // sesión del panel o llave de proceso automatizado (mismo patrón que tickets)
   const auth = req.headers.get("authorization");
-  const conLlave = process.env.CRON_SECRET && auth === `Bearer ${process.env.CRON_SECRET}`;
+  // Llaves de proceso: CRON_SECRET (interno) o la service key de Supabase —
+  // esta última la comparte el admin de cursos.vitarescue.com.mx (server a server).
+  const conLlave =
+    (process.env.CRON_SECRET && auth === `Bearer ${process.env.CRON_SECRET}`) ||
+    (process.env.SUPABASE_SERVICE_ROLE_KEY && auth === `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`);
   if (!conLlave) {
     const supabaseAuth = await createServerSupabaseClient();
     const { data: { user } } = await supabaseAuth.auth.getUser();

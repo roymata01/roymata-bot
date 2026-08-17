@@ -14,7 +14,11 @@ export async function POST(req: NextRequest) {
   const authClient = await createServerSupabaseClient();
   const { data: { user } } = await authClient.auth.getUser();
   const auth = req.headers.get("authorization");
-  const conLlave = process.env.CRON_SECRET && auth === `Bearer ${process.env.CRON_SECRET}`;
+  // Llaves de proceso: CRON_SECRET (interno) o la service key de Supabase —
+  // esta última la comparte el admin de cursos.vitarescue.com.mx (server a server).
+  const conLlave =
+    (process.env.CRON_SECRET && auth === `Bearer ${process.env.CRON_SECRET}`) ||
+    (process.env.SUPABASE_SERVICE_ROLE_KEY && auth === `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`);
   if (!user && !conLlave) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
   const { cotizacion_id, via, correo } = await req.json().catch(() => ({}));
