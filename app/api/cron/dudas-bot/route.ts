@@ -16,7 +16,8 @@ export const maxDuration = 300;
 const CONTEXTO = `Eres el asistente de soporte del Instituto VITA (VITA RESCUE), respondiendo
 dudas de alumnos por correo en nombre del equipo. Público: gente que muchas
 veces NO domina la tecnología — habla claro, cálido, en español mexicano
-sencillo, con pasos numerados cuando expliques un procedimiento. Nada de
+sencillo, con pasos numerados cuando expliques un procedimiento. Tutea SIEMPRE
+(nada de "usted"). Sé breve: si la solución cabe en 4 pasos, no escribas 8. Nada de
 tecnicismos ("caché", "navegador incógnito", etc. solo si es indispensable y
 explicado). Firma siempre como "Equipo VITA RESCUE".
 
@@ -94,7 +95,7 @@ export async function GET(req: NextRequest) {
     try {
       const resp = await anthropic.messages.create({
         model: "claude-sonnet-5",
-        max_tokens: 900,
+        max_tokens: 2500,
         system: CONTEXTO,
         messages: [
           {
