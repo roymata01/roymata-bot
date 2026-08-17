@@ -75,8 +75,8 @@ async function analizar(
       messages: mensajes,
     });
     const texto = resp.content
-      .filter((b): b is { type: "text"; text: string } => b.type === "text")
-      .map((b) => b.text)
+      .map((b) => (b.type === "text" ? b.text : ""))
+      .filter(Boolean)
       .join("\n");
     const ini = texto.indexOf("{");
     const fin = texto.lastIndexOf("}");
