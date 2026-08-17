@@ -13,6 +13,10 @@
       "schedule": "*/5 * * * *"
     },
     {
+      "path": "/api/cron/dudas-bot",
+      "schedule": "0 4 * * *"
+    },
+    {
       "path": "/api/cron/inversiones-snapshot",
       "schedule": "0 22 * * *"
     },
