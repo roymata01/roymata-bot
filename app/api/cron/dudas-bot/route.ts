@@ -59,6 +59,44 @@ FORMATO DE SALIDA — responde SOLO este JSON:
 o
 {"accion":"revision","razon":"<1-2 líneas: por qué lo dejas para Roy>"}`;
 
+// Llama a Claude y extrae el JSON de decisión; junta TODOS los bloques de
+// texto (el modelo a veces antepone razonamiento) y reintenta una vez si la
+// salida no fue JSON válido.
+async function analizar(
+  anthropic: ReturnType<typeof createAnthropicClient>,
+  pregunta: string
+): Promise<{ accion: string; respuesta?: string; razon?: string }> {
+  const mensajes: { role: "user" | "assistant"; content: string }[] = [{ role: "user", content: pregunta }];
+  for (let intento = 1; intento <= 2; intento++) {
+    const resp = await anthropic.messages.create({
+      model: "claude-sonnet-5",
+      max_tokens: 2500,
+      system: CONTEXTO,
+      messages: mensajes,
+    });
+    const texto = resp.content
+      .filter((b): b is { type: "text"; text: string } => b.type === "text")
+      .map((b) => b.text)
+      .join("\n");
+    const ini = texto.indexOf("{");
+    const fin = texto.lastIndexOf("}");
+    if (ini !== -1 && fin > ini) {
+      try {
+        return JSON.parse(texto.slice(ini, fin + 1));
+      } catch {
+        // cae al reintento
+      }
+    }
+    if (intento === 1) {
+      mensajes.push({ role: "assistant", content: texto.slice(0, 1500) });
+      mensajes.push({ role: "user", content: "Tu respuesta no fue el JSON pedido. Responde ÚNICAMENTE el objeto JSON del formato indicado, sin ningún texto adicional." });
+    } else {
+      throw new Error(`sin JSON tras 2 intentos; el modelo dijo: "${texto.slice(0, 150)}..."`);
+    }
+  }
+  throw new Error("inalcanzable");
+}
+
 export async function GET(req: NextRequest) {
   const auth = req.headers.get("authorization");
   if (!process.env.CRON_SECRET || auth !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -92,23 +130,11 @@ export async function GET(req: NextRequest) {
 - Cuenta del portal (ya creó contraseña): ${portal ? "SÍ existe" : "NO existe todavía"}`;
 
     let decision: { accion: string; respuesta?: string; razon?: string };
+    const pregunta = `DUDA de ${d.nombre} <${d.email}> (tipo: ${d.tipo}):\nAsunto: ${d.asunto}\nMensaje: ${d.mensaje}\n\n${contextoAlumno}`;
     try {
-      const resp = await anthropic.messages.create({
-        model: "claude-sonnet-5",
-        max_tokens: 2500,
-        system: CONTEXTO,
-        messages: [
-          {
-            role: "user",
-            content: `DUDA de ${d.nombre} <${d.email}> (tipo: ${d.tipo}):\nAsunto: ${d.asunto}\nMensaje: ${d.mensaje}\n\n${contextoAlumno}`,
-          },
-        ],
-      });
-      const texto = resp.content[0].type === "text" ? resp.content[0].text : "";
-      const json = texto.slice(texto.indexOf("{"), texto.lastIndexOf("}") + 1);
-      decision = JSON.parse(json);
+      decision = await analizar(anthropic, pregunta);
     } catch (e) {
-      decision = { accion: "revision", razon: `El análisis automático falló: ${e instanceof Error ? e.message : e}` };
+      decision = { accion: "revision", razon: `El análisis automático falló: ${e instanceof Error ? e.message.slice(0, 200) : e}` };
     }
 
     const fecha = new Date().toLocaleDateString("es-MX", { day: "numeric", month: "short", timeZone: "America/Mexico_City" });
