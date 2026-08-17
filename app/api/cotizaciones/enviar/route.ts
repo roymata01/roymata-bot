@@ -67,6 +67,45 @@ export async function POST(req: NextRequest) {
       console.error("Error enviando cotización por correo:", mailErr);
       return NextResponse.json({ error: "El correo no se pudo enviar." }, { status: 502 });
     }
+
+    // Aviso por WhatsApp al cliente (si dejó teléfono en su solicitud): le
+    // decimos que su cotización ya está en su correo y que el seguimiento es
+    // por ahí. Plantilla UTILITY "aviso_cotizacion_enviada". Nunca truena el
+    // envío principal: si falla, solo se reporta.
+    if (cot.quote_request_id) {
+      try {
+        const { data: qr } = await supabase
+          .from("quote_requests")
+          .select("telefono, nombre")
+          .eq("id", cot.quote_request_id)
+          .maybeSingle();
+        const digitos = String(qr?.telefono || "").replace(/\D/g, "");
+        if (digitos.length >= 10) {
+          const numero = digitos.length === 10 ? `52${digitos}` : digitos;
+          const nombrePila = (qr?.nombre || cot.dirigida || "").trim().split(/\s+/)[0] || "hola";
+          const wa = await fetch(`https://graph.facebook.com/v21.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              messaging_product: "whatsapp",
+              to: numero,
+              type: "template",
+              template: {
+                name: "aviso_cotizacion_enviada",
+                language: { code: "es_MX" },
+                components: [{ type: "body", parameters: [
+                  { type: "text", text: nombrePila.slice(0, 60) },
+                  { type: "text", text: destino.slice(0, 100) },
+                ] }],
+              },
+            }),
+          });
+          if (!wa.ok) console.error("Aviso WhatsApp de cotización falló:", wa.status, (await wa.text()).slice(0, 200));
+        }
+      } catch (e) {
+        console.error("Aviso WhatsApp de cotización:", e);
+      }
+    }
   }
 
   if (via === "chat") {

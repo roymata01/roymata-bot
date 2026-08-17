@@ -56,7 +56,7 @@ export async function maybeCaptureQuoteRequest(conversationId: string, contactId
 ¿El cliente está pidiendo un curso/capacitación PARA UN GRUPO (empresa, escuela, universidad, brigada, equipo, varias personas)? Preguntar por la clase gratis individual o un curso para sí mismo NO cuenta.
 
 Responde ÚNICAMENTE con JSON válido, sin texto extra:
-{"es_cotizacion": true/false, "nombre": "nombre completo del cliente o null", "organizacion": "empresa/escuela o null", "num_personas": número o null, "correo": "... o null", "telefono": "... o null", "notas": "resumen de 1 línea de lo que pide, o null"}
+{"es_cotizacion": true/false, "nombre": "nombre completo del cliente o null", "organizacion": "empresa/escuela o null", "num_personas": número o null, "correo": "... o null", "telefono": "... o null", "notas": "resumen de 1 línea: qué curso pide + su ciudad/estado/país si lo mencionó, o null"}
 
 Solo incluye datos que el CLIENTE haya dicho explícitamente. Si un dato no aparece, usa null.`,
       messages: [{ role: "user", content: transcript }],
