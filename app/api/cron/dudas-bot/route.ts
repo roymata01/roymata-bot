@@ -41,6 +41,9 @@ DATOS DEL PROGRAMA (Primera Generación del Instituto VITA, ago-dic 2026):
 - Los certificados también llegan por correo; si no los ven: revisar
   spam/promociones y buscar remitente vitarescue.com.mx.
 - El manual de cada clase se descarga en el portal, dentro de la clase.
+- Acceso a las clases EN VIVO: a cada alumno le llega su link personal de Zoom
+  por correo antes de la clase, y también aparece un botón "Unirse a mi clase"
+  arriba de su portal el día de la clase. NO inventes otros canales.
 - Pagos OXXO: el pago tarda en confirmarse (días hábiles); al confirmarse llega
   todo automático al correo.
 - Ayuda adicional: pueden responder el correo o escribir en
@@ -141,6 +144,17 @@ export async function GET(req: NextRequest) {
 
     if (decision.accion === "responder" && decision.respuesta) {
       if (!dry) {
+        // PRIMERO se marca en la base y DESPUÉS se envía: si la marca falla
+        // (p.ej. falta el SQL de estados), NO se manda nada y no hay riesgo de
+        // correos duplicados en la siguiente corrida.
+        const { error: marcaErr } = await supabase.from("support_requests").update({
+          estado: "resuelta_bot",
+          notas: `🤖 Contestada por el bot (${fecha}):\n${decision.respuesta}`,
+        }).eq("id", d.id);
+        if (marcaErr) {
+          resultados.push({ duda: d.asunto, email: d.email, accion: "marca_fallo", error: marcaErr.message.slice(0, 120) });
+          continue;
+        }
         const nombrePila = (d.nombre || "").trim().split(/\s+/)[0] || "";
         const { error: mailErr } = await resend.emails.send({
           from: "Instituto VITA <contacto@vitarescue.com.mx>",
@@ -161,10 +175,6 @@ ${decision.respuesta.split(/\n{2,}/).map((p) => `<p>${p.replace(/\n/g, "<br/>")}
           resultados.push({ duda: d.asunto, email: d.email, accion: "correo_fallo" });
           continue;
         }
-        await supabase.from("support_requests").update({
-          estado: "resuelta_bot",
-          notas: `🤖 Contestada por el bot (${fecha}):\n${decision.respuesta}`,
-        }).eq("id", d.id);
       }
       resultados.push({ duda: d.asunto, email: d.email, accion: "respondida", respuesta: decision.respuesta });
     } else {
