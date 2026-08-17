@@ -59,32 +59,22 @@ export async function POST(req: NextRequest) {
   const remitente = (de.match(/<([^>]+)>/)?.[1] || de).toLowerCase().trim();
   const esRoy = ROY.some((e) => remitente.includes(e));
 
-  // Si escribe Roy, el destinatario real es el cliente: el último que escribió
-  // en este folio, o el correo de la solicitud original.
+  // Si escribe Roy, se reenvía al cliente SOLO cuando ya hay una conversación
+  // viva: es decir, el cliente escribió antes en este folio. Sin ese "in"
+  // previo no se manda nada (evita que un correo suelto o una prueba termine
+  // en el buzón de un cliente que nunca escribió).
   let cliente: string | null = null;
   if (esRoy && folio) {
     const { data: previos } = await supabase
       .from("cotizacion_correos")
-      .select("from_email, to_email, direction")
+      .select("from_email")
       .eq("folio", folio)
+      .eq("direction", "in")
       .order("created_at", { ascending: false })
       .limit(20);
     for (const m of previos ?? []) {
-      const candidato = m.direction === "in"
-        ? (m.from_email.match(/<([^>]+)>/)?.[1] || m.from_email).toLowerCase().trim()
-        : (m.to_email || "").toLowerCase().trim();
+      const candidato = (m.from_email.match(/<([^>]+)>/)?.[1] || m.from_email).toLowerCase().trim();
       if (candidato && !ROY.some((e) => candidato.includes(e))) { cliente = candidato; break; }
-    }
-    if (!cliente && cotizacionId) {
-      const { data: cot } = await supabase
-        .from("cotizaciones_emitidas")
-        .select("quote_request_id")
-        .eq("id", cotizacionId)
-        .maybeSingle();
-      if (cot?.quote_request_id) {
-        const { data: qr } = await supabase.from("quote_requests").select("correo").eq("id", cot.quote_request_id).maybeSingle();
-        cliente = qr?.correo?.toLowerCase().trim() || null;
-      }
     }
   }
 
@@ -95,7 +85,9 @@ export async function POST(req: NextRequest) {
     from_email: de.slice(0, 200),
     to_email: (esRoy ? cliente || para : para).slice(0, 200),
     subject: asunto.slice(0, 300),
-    body_text: (correo.text || "").slice(0, 20000) || null,
+    body_text:
+      ((esRoy && !cliente ? "⚠️ NO ENVIADO (el cliente no ha escrito en este folio todavía)\n\n" : "") +
+        (correo.text || "")).slice(0, 20000) || null,
     body_html: (correo.html || "").slice(0, 100000) || null,
     resend_id: emailId,
   });
