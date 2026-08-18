@@ -105,15 +105,24 @@ export default async function AprobarPage({ params }: { params: Promise<{ slug: 
           </div>
         )}
 
-        {/* Vista completa de la hoja 1 en el celular: el ancho manda y la
-            altura se calcula con la proporción carta (11/8.5). */}
-        <div style={{ position: "relative", width: "100%", aspectRatio: "8.5 / 11", border: "1px solid #dbe4f0", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
-          <iframe
-            src={`${cot.pdf_url}#page=1&view=Fit&toolbar=0&navpanes=0`}
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }}
-            title="Cotización"
+        {/* Hoja 1 como IMAGEN: se ve completa en el celular de un vistazo
+            (los visores de PDF embebidos salen en negro en móvil). */}
+        {cot.preview_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={cot.preview_url}
+            alt={`Cotización S${cot.folio}, hoja 1`}
+            style={{ width: "100%", display: "block", border: "1px solid #dbe4f0", borderRadius: 12, background: "#fff" }}
           />
-        </div>
+        ) : (
+          <div style={{ position: "relative", width: "100%", aspectRatio: "8.5 / 11", border: "1px solid #dbe4f0", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
+            <iframe
+              src={`${cot.pdf_url}#page=1&view=Fit&toolbar=0&navpanes=0`}
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }}
+              title="Cotización"
+            />
+          </div>
+        )}
         <a
           href={cot.pdf_url}
           target="_blank"

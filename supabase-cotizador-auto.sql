@@ -16,3 +16,6 @@ create table if not exists public.cotizador_cursos (
 
 alter table public.cotizador_tarifas enable row level security;
 alter table public.cotizador_cursos enable row level security;
+
+-- Imagen de la hoja 1 de cada cotización (para aprobar desde el celular)
+alter table public.cotizaciones_emitidas add column if not exists preview_url text;

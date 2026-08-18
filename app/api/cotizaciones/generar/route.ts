@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { htmlCotizacion, calcularTotales } from "@/lib/cotizaciones/plantilla";
-import { htmlAPdf } from "@/lib/cotizaciones/pdf";
+import { htmlAPdfConPreview } from "@/lib/cotizaciones/pdf";
 
 export const maxDuration = 120;
 
@@ -72,8 +72,9 @@ export async function POST(req: NextRequest) {
   });
 
   let pdf: Buffer;
+  let preview: Buffer | null = null;
   try {
-    pdf = await htmlAPdf(html);
+    ({ pdf, preview } = await htmlAPdfConPreview(html));
   } catch (err) {
     console.error("Error generando PDF de cotización:", err);
     return NextResponse.json({ error: "No se pudo generar el PDF. Intenta de nuevo." }, { status: 500 });
@@ -89,6 +90,16 @@ export async function POST(req: NextRequest) {
   }
   const { data: urlData } = supabase.storage.from("cotizaciones").getPublicUrl(fileName);
 
+  // Imagen de la hoja 1 (para la pantalla de aprobación en el celular)
+  let previewUrl: string | null = null;
+  if (preview) {
+    const previewName = `S${folio}-hoja1.png`;
+    const { error: pErr } = await supabase.storage
+      .from("cotizaciones")
+      .upload(previewName, preview, { contentType: "image/png", upsert: true });
+    if (!pErr) previewUrl = supabase.storage.from("cotizaciones").getPublicUrl(previewName).data.publicUrl;
+  }
+
   const { data: fila, error: dbErr } = await supabase
     .from("cotizaciones_emitidas")
     .insert({
@@ -101,6 +112,7 @@ export async function POST(req: NextRequest) {
       descuento_pct: pct,
       total,
       pdf_url: urlData.publicUrl,
+      preview_url: previewUrl,
     })
     .select("id, folio, pdf_url, total, descuento_pct")
     .single();
