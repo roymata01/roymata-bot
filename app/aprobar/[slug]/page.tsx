@@ -23,14 +23,32 @@ export default async function AprobarPage({ params }: { params: Promise<{ slug: 
     : { data: null };
 
   let correoCliente: string | null = null;
+  let solicitud: {
+    nombre: string | null;
+    organizacion: string | null;
+    num_personas: number | null;
+    correo: string | null;
+    telefono: string | null;
+    notas: string | null;
+  } | null = null;
   if (cot?.quote_request_id) {
     const { data: qr } = await supabase
       .from("quote_requests")
-      .select("correo, nombre, organizacion")
+      .select("correo, nombre, organizacion, num_personas, telefono, notas")
       .eq("id", cot.quote_request_id)
       .maybeSingle();
     correoCliente = qr?.correo ?? null;
+    solicitud = qr ?? null;
   }
+
+  // Lo que pidió el cliente, en campos sueltos para comparar de un vistazo
+  const notas = solicitud?.notas || "";
+  const pedido = {
+    lugar: notas.match(/Lugar:\s*([^·]+)/)?.[1]?.trim() || "—",
+    curso: notas.match(/Curso:\s*([^·]+)/)?.[1]?.trim() || "—",
+    instructorRoy: /Instructor Roy:\s*S[ÍI]/i.test(notas),
+    comentarios: notas.match(/Comentarios:\s*(.+)$/)?.[1]?.trim() || "",
+  };
 
   if (!valida || !cot) {
     return (
@@ -57,11 +75,53 @@ export default async function AprobarPage({ params }: { params: Promise<{ slug: 
           {cot.descuento_pct > 0 ? ` · incluye ${cot.descuento_pct}% de descuento por grupo` : ""}
           {correoCliente ? ` · se enviará a ${correoCliente}` : ""}
         </p>
-        <iframe
-          src={cot.pdf_url}
-          style={{ width: "100%", height: "58vh", border: "1px solid #dbe4f0", borderRadius: 12, background: "#fff" }}
-          title="Cotización"
-        />
+
+        {/* Lo que pidió el cliente, para comparar contra la cotización armada */}
+        {solicitud && (
+          <div style={{ background: "#fff", border: "1px solid #dbe4f0", borderRadius: 12, padding: "12px 14px", marginBottom: 12 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", color: "#64748b", margin: "0 0 8px" }}>
+              Lo que pidió el cliente
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
+              {[
+                ["Quién", `${solicitud.nombre || "—"}${solicitud.organizacion ? ` · ${solicitud.organizacion}` : ""}`],
+                ["Personas", solicitud.num_personas ? String(solicitud.num_personas) : "—"],
+                ["Lugar", pedido.lugar],
+                ["Curso", pedido.curso],
+                ["Instructor Roy", pedido.instructorRoy ? "SÍ (+$5,000)" : "no"],
+                ["Contacto", [solicitud.correo, solicitud.telefono].filter(Boolean).join(" · ") || "—"],
+              ].map(([etiqueta, valor]) => (
+                <div key={etiqueta}>
+                  <p style={{ fontSize: 10, color: "#94a3b8", margin: 0, textTransform: "uppercase", fontWeight: 700 }}>{etiqueta}</p>
+                  <p style={{ fontSize: 13, color: "#0f172a", margin: "1px 0 0", lineHeight: 1.35 }}>{valor}</p>
+                </div>
+              ))}
+            </div>
+            {pedido.comentarios && (
+              <p style={{ fontSize: 13, color: "#0f172a", margin: "10px 0 0", background: "#fef9c3", borderRadius: 8, padding: "8px 10px" }}>
+                💬 {pedido.comentarios}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Vista completa de la hoja 1 en el celular: el ancho manda y la
+            altura se calcula con la proporción carta (11/8.5). */}
+        <div style={{ position: "relative", width: "100%", aspectRatio: "8.5 / 11", border: "1px solid #dbe4f0", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
+          <iframe
+            src={`${cot.pdf_url}#page=1&view=Fit&toolbar=0&navpanes=0`}
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }}
+            title="Cotización"
+          />
+        </div>
+        <a
+          href={cot.pdf_url}
+          target="_blank"
+          rel="noreferrer"
+          style={{ display: "inline-block", marginTop: 8, fontSize: 13, color: "#1a56db", fontWeight: 600 }}
+        >
+          Abrir el PDF completo (2 páginas) ↗
+        </a>
         <BotonAprobar slug={slug} yaEnviada={yaEnviada} tieneCorreo={!!correoCliente} />
         <p style={{ color: "#94a3b8", fontSize: 12, marginTop: 12 }}>
           Si algo no cuadra, no aproveches este botón: edítala o reenvíala desde tu panel de Cotizaciones.
