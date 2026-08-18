@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // /datos-alumno es el formulario que los alumnos llenan sin cuenta.
-const PUBLIC_PATHS = ["/login", "/datos-alumno", "/inversiones-socio"];
+const PUBLIC_PATHS = ["/login", "/datos-alumno", "/inversiones-socio", "/aprobar"];
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -46,6 +46,6 @@ export const config = {
   matcher: [
     // api/alumnos queda fuera porque su POST es público (el formulario de los
     // alumnos); su GET verifica la sesión dentro de la propia ruta.
-    "/((?!api/webhooks|api/cron|api/tickets|api/cotizaciones|api/inversiones|api/campanas|api/finanzas|api/alumnos|_next/static|_next/image|favicon.ico|manifest.webmanifest|icon.png|icon-192.png|icon-512.png|apple-icon.png|logo-vita.png).*)",
+    "/((?!api/webhooks|api/cron|api/tickets|api/aprobar|api/cotizaciones|api/inversiones|api/campanas|api/finanzas|api/alumnos|_next/static|_next/image|favicon.ico|manifest.webmanifest|icon.png|icon-192.png|icon-512.png|apple-icon.png|logo-vita.png).*)",
   ],
 };

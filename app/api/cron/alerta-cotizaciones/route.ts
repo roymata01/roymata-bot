@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { evaluarYGenerar } from "@/lib/cotizador/auto";
 
 export const maxDuration = 60;
 
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
   const supabase = createAdminClient();
   const { data: nuevas } = await supabase
     .from("quote_requests")
-    .select("id, nombre, organizacion, num_personas, contact:contacts(channel)")
+    .select("id, nombre, organizacion, num_personas, correo, notas, conversation_id, contact:contacts(channel)")
     .eq("alertada", false)
     .order("created_at")
     .limit(10);
@@ -34,10 +35,58 @@ export async function GET(req: NextRequest) {
   for (const q of nuevas ?? []) {
     const quien = q.organizacion || q.nombre || "Sin nombre";
     const contacto = q.contact as { channel?: string } | null;
-    const origen = [
-      q.num_personas ? `${q.num_personas} personas` : "personas por confirmar",
-      contacto?.channel ? `vía ${CANAL[contacto.channel] || contacto.channel}` : "vía la página web",
-    ].join(" · ");
+
+    // NIVEL 1 del cotizador: intentar generar la cotización automáticamente.
+    // Si es un caso estándar, el WhatsApp a Roy trae el botón de aprobar; si
+    // no, va la alerta clásica de "hazla a mano".
+    let plantilla: { name: string; components: unknown[] };
+    let auto = null as Awaited<ReturnType<typeof evaluarYGenerar>> | null;
+    try {
+      auto = await evaluarYGenerar(q);
+    } catch (e) {
+      console.error("Cotizador auto:", e);
+    }
+
+    if (auto?.apto) {
+      plantilla = {
+        name: "cotizacion_lista_aprobar",
+        components: [
+          {
+            type: "body",
+            parameters: [
+              { type: "text", text: `S${auto.folio}` },
+              { type: "text", text: auto.resumen.slice(0, 500) },
+            ],
+          },
+          {
+            type: "button",
+            sub_type: "url",
+            index: "0",
+            parameters: [{ type: "text", text: auto.linkAprobar }],
+          },
+        ],
+      };
+    } else {
+      const origen = [
+        q.num_personas ? `${q.num_personas} personas` : "personas por confirmar",
+        contacto?.channel ? `vía ${CANAL[contacto.channel] || contacto.channel}` : "vía la página web",
+        auto && !auto.apto ? `(manual: ${auto.razon})` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      plantilla = {
+        name: "alerta_cotizacion",
+        components: [
+          {
+            type: "body",
+            parameters: [
+              { type: "text", text: quien.slice(0, 100) },
+              { type: "text", text: origen.slice(0, 100) },
+            ],
+          },
+        ],
+      };
+    }
 
     const res = await fetch(`https://graph.facebook.com/v21.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
       method: "POST",
@@ -46,19 +95,7 @@ export async function GET(req: NextRequest) {
         messaging_product: "whatsapp",
         to: NUMERO_ROY,
         type: "template",
-        template: {
-          name: "alerta_cotizacion",
-          language: { code: "es_MX" },
-          components: [
-            {
-              type: "body",
-              parameters: [
-                { type: "text", text: quien.slice(0, 100) },
-                { type: "text", text: origen.slice(0, 100) },
-              ],
-            },
-          ],
-        },
+        template: { name: plantilla.name, language: { code: "es_MX" }, components: plantilla.components },
       }),
     });
     if (res.ok) {
