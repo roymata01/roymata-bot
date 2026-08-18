@@ -8,8 +8,10 @@ export const dynamic = "force-dynamic";
 // plantilla "cotizacion_lista_aprobar" (slug = <cotizacionId>-<firma HMAC>).
 // Sin firma válida no se muestra nada. Al aprobar, la cotización se envía al
 // cliente por correo (+ aviso de WhatsApp si dejó teléfono).
-export default async function AprobarPage({ params }: { params: { slug: string } }) {
-  const slug = params.slug || "";
+// En esta versión de Next los params llegan como promesa (hay que await).
+export default async function AprobarPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug: slugParam } = await params;
+  const slug = slugParam || "";
   const idx = slug.lastIndexOf("-");
   const id = slug.slice(0, idx);
   const firma = slug.slice(idx + 1);
