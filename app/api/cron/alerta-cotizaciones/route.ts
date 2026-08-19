@@ -104,6 +104,31 @@ export async function GET(req: NextRequest) {
     } else {
       errores.push(`${quien}: ${res.status} ${(await res.text()).slice(0, 120)}`);
     }
+
+    // Respaldo por CORREO: el WhatsApp puede fallar (ventana, cobros de Meta,
+    // etc.) y una cotización no se puede quedar esperando por eso.
+    try {
+      if (process.env.RESEND_API_KEY) {
+        const { Resend } = await import("resend");
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        const cuerpo = auto?.apto
+          ? `<p>Se generó sola la cotización <strong>S${auto.folio}</strong>:</p>
+<p style="background:#f4f4f5;padding:12px;border-radius:8px;">${auto.resumen}</p>
+<p><a href="https://sistema.vitarescue.com.mx/aprobar/${auto.linkAprobar}" style="display:inline-block;background:#1a56db;color:#fff;font-weight:700;padding:12px 20px;border-radius:10px;text-decoration:none;">Revisar y aprobar →</a></p>
+<p style="color:#777;font-size:13px;">Al aprobar se envía sola al cliente. Si prefieres cambiarla, hazlo desde tu panel de Cotizaciones.</p>`
+          : `<p>Nueva solicitud de cotización de <strong>${quien}</strong>${q.num_personas ? ` (${q.num_personas} personas)` : ""}.</p>
+<p style="color:#777;font-size:13px;">Esta hay que hacerla a mano${auto && !auto.apto ? `: ${auto.razon}` : ""}.</p>
+<p><a href="https://cursos.vitarescue.com.mx/admin/cotizaciones" style="display:inline-block;background:#1a56db;color:#fff;font-weight:700;padding:12px 20px;border-radius:10px;text-decoration:none;">Abrir Cotizaciones →</a></p>`;
+        await resend.emails.send({
+          from: "Sistema VITA <contacto@vitarescue.com.mx>",
+          to: "roymataparamedic@gmail.com",
+          subject: auto?.apto ? `📋 Cotización S${auto.folio} lista para aprobar — ${quien}` : `🔔 Nueva solicitud de cotización — ${quien}`,
+          html: `<div style="max-width:540px;margin:0 auto;padding:24px 16px;font-family:Arial,sans-serif;color:#222;font-size:15px;line-height:1.7;">${cuerpo}</div>`,
+        });
+      }
+    } catch (e) {
+      console.error("Respaldo por correo de la alerta:", e);
+    }
   }
 
   if (errores.length) console.error("Alertas de cotización con error:", errores);
