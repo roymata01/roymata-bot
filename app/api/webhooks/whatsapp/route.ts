@@ -23,11 +23,29 @@ export async function POST(req: NextRequest) {
 
   const body = JSON.parse(rawBody);
 
-  // registro temporal de acuses de entrega/error para diagnóstico
+  // Acuses de entrega. Los fallos NO se ven en la respuesta de la API (Meta
+  // contesta "accepted" y luego avisa por aquí), así que cuando un mensaje
+  // falla se manda el error por correo — si no, se pierde en los logs.
   try {
     const statuses = body?.entry?.[0]?.changes?.[0]?.value?.statuses;
-    if (statuses) console.log("WA status:", JSON.stringify(statuses).slice(0, 800));
-  } catch {}
+    if (statuses) {
+      console.log("WA status:", JSON.stringify(statuses).slice(0, 800));
+      const fallidos = statuses.filter((s: { status?: string }) => s?.status === "failed");
+      if (fallidos.length && process.env.RESEND_API_KEY) {
+        const { Resend } = await import("resend");
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        await resend.emails.send({
+          from: "Sistema VITA <contacto@vitarescue.com.mx>",
+          to: "roymataparamedic@gmail.com",
+          subject: "⚠️ Un WhatsApp del sistema no se pudo entregar",
+          html: `<p>Meta rechazó la entrega de un mensaje. Detalle técnico:</p>
+<pre style="background:#f4f4f5;padding:12px;border-radius:8px;white-space:pre-wrap;font-size:12px;">${JSON.stringify(fallidos, null, 2).slice(0, 3000).replace(/</g, "&lt;")}</pre>`,
+        });
+      }
+    }
+  } catch (e) {
+    console.error("WA status:", e);
+  }
 
   const messages = parseWhatsAppPayload(body);
 
