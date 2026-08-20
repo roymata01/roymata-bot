@@ -5,6 +5,9 @@ import { sendKeywordReplyIfMatch } from "@/lib/inbox/handle-keyword-reply";
 import { handleCampaignReply } from "@/lib/inbox/handle-campaign-reply";
 import { checkEscalation } from "@/lib/ai/check-escalation";
 import { royFollowsInstagramUser } from "@/lib/meta/check-roy-follows";
+import { modoEventoHyroxActivo } from "@/lib/hyrox/config";
+import { detectarFamiliarHyrox } from "@/lib/hyrox/detectar-familiar";
+import { atenderFamiliarHyrox } from "@/lib/hyrox/atender-familiar";
 import { classifyMessage } from "@/lib/ai/classify-message";
 import { maybeCaptureQuoteRequest } from "@/lib/ai/extract-quote";
 import { escalateConversation } from "@/lib/ai/escalate-conversation";
@@ -28,6 +31,37 @@ export async function processInboundMessage(msg: InboundMessage) {
   // La escalación (por palabra clave o por IA) y los workflows corren siempre,
   // esté pausada la IA o no — son seguridad/organización, no "la IA hablando".
   const escalatedByKeyword = await checkEscalation(conversation.id, msg.content);
+
+  // MODO EVENTO HYROX (se prende con MODO_EVENTO_HYROX=true).
+  // Durante el evento, la app de VITA RESCUE le manda alertas médicas a los
+  // familiares desde este mismo número de WhatsApp. Cuando el familiar contesta
+  // —angustiado— cae aquí, y el bot normal le ofrecería un curso. Este bloque lo
+  // intercepta antes de todo: se identifica como sistema, confirma solo que su
+  // familiar está siendo atendido y lo manda con el staff. Nada más.
+  // Va DESPUÉS de la escalación a propósito: si además pidió auxilio con una
+  // palabra clave de emergencia, la conversación queda marcada para Roy igual.
+  if (modoEventoHyroxActivo() && msg.channel === "whatsapp") {
+    const familiar = await detectarFamiliarHyrox({
+      texto: msg.content,
+      telefono: msg.externalId,
+      conversationId: conversation.id,
+    });
+    if (familiar.esFamiliar) {
+      console.log(`HYROX: familiar detectado (${familiar.motivo}); puesto: ${familiar.puesto ?? "desconocido"}`);
+      // Pausa corta: no es momento de fingir que alguien teclea despacio.
+      await new Promise((r) => setTimeout(r, 2000 + Math.random() * 2000));
+      await atenderFamiliarHyrox({
+        conversationId: conversation.id,
+        contactId: contact.id,
+        channel: msg.channel,
+        externalId: msg.externalId,
+        texto: msg.content,
+        puesto: familiar.puesto,
+      });
+      return;
+    }
+  }
+
   if (escalatedByKeyword) return;
 
   // Regla de Roy (2026-08-13): si Roy SIGUE a la persona en Instagram, es de su
