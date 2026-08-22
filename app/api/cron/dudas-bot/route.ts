@@ -60,7 +60,7 @@ CUÁNDO NO DEBES CONTESTAR (accion "revision"):
 FORMATO DE SALIDA — responde SOLO este JSON:
 {"accion":"responder","respuesta":"<texto plano del correo, con saltos de línea; sin asunto, sin 'Hola X' porque el sistema lo agrega>"}
 o
-{"accion":"revision","razon":"<1-2 líneas: por qué lo dejas para Roy>"}`;
+{"accion":"revision","razon":"<1-2 líneas: por qué lo dejas para Roy>","respuesta":"<AUN ASÍ escribe tu mejor borrador del correo que Roy podría mandar — mismo formato que arriba. Si te falta un dato, déjalo entre corchetes, ej. [FOLIO CORRECTO]. Roy lo edita y decide si lo envía; NUNCA se manda solo>"}`;
 
 // Llama a Claude y extrae el JSON de decisión; junta TODOS los bloques de
 // texto (el modelo a veces antepone razonamiento) y reintenta una vez si la
@@ -170,7 +170,8 @@ ${decision.respuesta.split(/\n{2,}/).map((p) => `<p>${p.replace(/\n/g, "<br/>")}
         if (mailErr) {
           await supabase.from("support_requests").update({
             estado: "revision",
-            notas: `🤖 Intenté contestar pero el correo falló (${JSON.stringify(mailErr).slice(0, 100)}). Respuesta propuesta:\n${decision.respuesta}`,
+            notas: `🤖 Intenté contestar pero el correo falló (${JSON.stringify(mailErr).slice(0, 100)}).`,
+            borrador: decision.respuesta,
           }).eq("id", d.id);
           resultados.push({ duda: d.asunto, email: d.email, accion: "correo_fallo" });
           continue;
@@ -182,9 +183,11 @@ ${decision.respuesta.split(/\n{2,}/).map((p) => `<p>${p.replace(/\n/g, "<br/>")}
         await supabase.from("support_requests").update({
           estado: "revision",
           notas: `🤖 Necesita tu revisión (${fecha}): ${decision.razon || "sin razón"}`,
+          // El borrador se guarda aparte: el panel lo muestra con Editar/Enviar.
+          borrador: decision.respuesta || null,
         }).eq("id", d.id);
       }
-      resultados.push({ duda: d.asunto, email: d.email, accion: "revision", razon: decision.razon });
+      resultados.push({ duda: d.asunto, email: d.email, accion: "revision", razon: decision.razon, borrador: !!decision.respuesta });
     }
   }
 
