@@ -221,7 +221,7 @@ export function redactar(p: Pendiente): { asunto: string; html: string; texto: s
       parrafos: [
         `${hola}`,
         `Le escribo para confirmar que haya recibido correctamente la cotización <strong>S${c.folio}</strong>, del curso de primeros auxilios para ${personas}. En ocasiones estos correos llegan a la carpeta de no deseados y preferimos asegurarnos.`,
-        `Con gusto le recuerdo lo que incluye: nosotros llegamos a sus instalaciones con maniquíes, DEA de entrenamiento y todo el material necesario. El curso es completamente práctico, y cada participante recibe su constancia con vigencia de un año <strong>el mismo día</strong>.`,
+        `Con gusto le recuerdo lo que incluye: nosotros llegamos a sus instalaciones con <strong>todo el material para la capacitación práctica</strong> — maniquíes, simuladores y el equipo necesario para que cada participante practique. Al terminar, todos reciben su constancia con vigencia de un año <strong>el mismo día</strong>.`,
         `Si desea que le explique el temario con más detalle o que revisemos fechas disponibles, quedo por completo a sus órdenes.`,
       ],
     },
@@ -256,7 +256,16 @@ ${parrafos.map((t) => `<p>${t}</p>`).join("\n")}
 <span style="color:#777;font-size:13px;">Centro Capacitador en Primeros Auxilios</span><br />
 <span style="color:#777;font-size:13px;">"Aprender, Aplicar, Salvar"</span></p>
 </div>`;
-  const texto = parrafos.map((t) => t.replace(/<[^>]+>/g, "")).join("\n\n");
+  // La versión en texto plano se guarda en el hilo del CRM: hay que quitar las
+  // etiquetas y también deshacer las entidades, o ahí se lee "&amp;".
+  const texto = parrafos
+    .map((t) =>
+      t.replace(/<[^>]+>/g, "")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+    )
+    .join("\n\n");
   return { asunto, html, texto };
 }
 
