@@ -189,6 +189,10 @@ function capitalizar(texto: string) {
  * Con quién se abre el correo. Nunca "Hola Sin nombre," ni un nombre partido
  * a la mitad: si es institución va completa, si es persona va su nombre de pila.
  */
+function escaparHtml(t: string) {
+  return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 function saludo(dirigida: string | null) {
   // Varios "nombres" traen la dirección pegada: "Escuela en CDMX (Calzada de
   // los Misterios, ...)". Para saludar basta lo que va antes del paréntesis.
@@ -196,12 +200,10 @@ function saludo(dirigida: string | null) {
     .split(/[(,;]/)[0]
     .trim()
     .replace(/\s+/g, " ");
-  if (!n || n.length < 2 || /^sin nombre$/i.test(n)) return "Hola, buen día:";
-  if (ES_ORGANIZACION.test(n)) {
-    const nombre = capitalizar(n).slice(0, 60).trim();
-    return `Hola, buen día:`.replace(/:$/, ` \u2014 ${nombre}:`);
-  }
-  return `Hola ${capitalizar(n.split(" ")[0])},`;
+  // Siempre de usted. Y sin "Estimado/a": no sabemos el género de quien lee.
+  if (!n || n.length < 2 || /^sin nombre$/i.test(n)) return "Buen día:";
+  if (ES_ORGANIZACION.test(n)) return `Buen día, ${escaparHtml(capitalizar(n).slice(0, 60).trim())}:`;
+  return `Buen día, ${escaparHtml(capitalizar(n.split(" ")[0]))}:`;
 }
 
 /**
@@ -215,29 +217,32 @@ export function redactar(p: Pendiente): { asunto: string; html: string; texto: s
 
   const cuerpos: Record<number, { asunto: string; parrafos: string[] }> = {
     1: {
-      asunto: `Re: Cotización S${c.folio} — ¿te llegó bien?`,
+      asunto: `Cotización S${c.folio} — quedamos a sus órdenes`,
       parrafos: [
         `${hola}`,
-        `Te escribo nada más para confirmar que te haya llegado la cotización <strong>S${c.folio}</strong> del curso de primeros auxilios para ${personas}. A veces estos correos se van a la carpeta de no deseados.`,
-        `Si tienes cualquier duda sobre el temario, la duración o las fechas, respóndeme este mismo correo y con gusto te explico.`,
+        `Le escribo para confirmar que haya recibido correctamente la cotización <strong>S${c.folio}</strong>, del curso de primeros auxilios para ${personas}. En ocasiones estos correos llegan a la carpeta de no deseados y preferimos asegurarnos.`,
+        `Con gusto le recuerdo lo que incluye: nosotros llegamos a sus instalaciones con maniquíes, DEA de entrenamiento y todo el material necesario. El curso es completamente práctico, y cada participante recibe su constancia con vigencia de un año <strong>el mismo día</strong>.`,
+        `Si desea que le explique el temario con más detalle o que revisemos fechas disponibles, quedo por completo a sus órdenes.`,
       ],
     },
     2: {
-      asunto: `Re: Cotización S${c.folio} — ¿resolvemos alguna duda?`,
+      asunto: `Cotización S${c.folio} — con gusto la ajustamos a su medida`,
       parrafos: [
         `${hola}`,
-        `Sigo pendiente de la cotización <strong>S${c.folio}</strong> para ${personas}.`,
-        `Si el presupuesto o la fecha no te acomodan, dímelo con confianza: casi siempre encontramos cómo ajustarlo. Podemos dar el curso en tus instalaciones, o dividir al grupo en dos turnos para no parar la operación.`,
-        `Si prefieres platicarlo por teléfono, contéstame este correo con tu horario y yo te marco.`,
+        `Espero que se encuentre muy bien. Le escribo para ponerme a sus órdenes respecto a la cotización <strong>S${c.folio}</strong>.`,
+        `Sé que organizar una capacitación para ${personas} implica cuadrar horarios y presupuesto, y en eso podemos ayudarle con mucho gusto: podemos <strong>dividir al grupo en dos turnos</strong> para no detener sus actividades, ajustar la fecha a lo que mejor les convenga, y si lo requieren emitimos <strong>DC-3 ante la STPS</strong> y factura.`,
+        `Lo más valioso es lo que su equipo se lleva: saber exactamente qué hacer en los primeros minutos de una emergencia — controlar una hemorragia, usar un DEA, atender un atragantamiento. Son precisamente los minutos en los que se salva una vida.`,
+        `Si lo prefiere, con mucho gusto le marco por teléfono para resolver cualquier duda. Solo indíqueme el horario que le acomode y yo me comunico con usted.`,
       ],
     },
     3: {
-      asunto: `Re: Cotización S${c.folio} — ¿la dejamos para más adelante?`,
+      asunto: `Cotización S${c.folio} — seguimos a sus órdenes`,
       parrafos: [
         `${hola}`,
-        `No quiero seguir llenándote el correo, así que este es mi último mensaje sobre la cotización <strong>S${c.folio}</strong>.`,
-        `Si el curso quedó para después, no hay ningún problema: guardo tu expediente y cuando estés listo me escribes y lo retomamos desde donde lo dejamos.`,
-        `Y si ya no va, también está bien — solo dímelo para dejar de insistir. Gracias por haber considerado a VITA RESCUE.`,
+        `Le escribo para reiterarle nuestro agradecimiento por haber considerado a VITA RESCUE para la capacitación de su equipo. Para nosotros es un gusto que nos hayan tomado en cuenta.`,
+        `Entendemos que estos proyectos toman su tiempo y dependen de muchos factores. Su cotización <strong>S${c.folio}</strong> queda guardada en nuestro sistema, de modo que cuando llegue el momento oportuno basta con que me escriba y la retomamos justo donde la dejamos, sin necesidad de comenzar de nuevo.`,
+        `Mientras tanto, quedamos a sus órdenes para cualquier duda sobre nuestros cursos: primeros auxilios básicos, RCP y uso del DEA, control de hemorragias (Stop The Bleed), primeros auxilios en niños y bebés, y nuestro programa especial para colegios.`,
+        `Le deseo mucho éxito en sus proyectos y quedo atento a lo que necesite.`,
       ],
     },
   };
@@ -245,8 +250,11 @@ export function redactar(p: Pendiente): { asunto: string; html: string; texto: s
   const { asunto, parrafos } = cuerpos[p.paso];
   const html = `<div style="max-width:540px;margin:0 auto;padding:24px 16px;font-family:Arial,sans-serif;color:#222;font-size:15px;line-height:1.7;">
 ${parrafos.map((t) => `<p>${t}</p>`).join("\n")}
-<p style="margin-top:24px;">TUM I. Rodrigo Mata Santillana<br />
-<span style="color:#777;font-size:13px;">Director VITA RESCUE · "Aprender, Aplicar, Salvar"</span></p>
+<p style="margin-top:26px;">
+<strong>TUM I. Rodrigo Mata Santillana</strong><br />
+<span style="color:#555;font-size:13.5px;">Director · VITA RESCUE</span><br />
+<span style="color:#777;font-size:13px;">Centro Capacitador en Primeros Auxilios</span><br />
+<span style="color:#777;font-size:13px;">"Aprender, Aplicar, Salvar"</span></p>
 </div>`;
   const texto = parrafos.map((t) => t.replace(/<[^>]+>/g, "")).join("\n\n");
   return { asunto, html, texto };
