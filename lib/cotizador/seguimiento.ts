@@ -160,11 +160,48 @@ export function filtrar(pendientes: Pendiente[]): { envios: Pendiente[]; bloquea
   return { envios: [...porDestino.values()], bloqueados };
 }
 
-/** Nombre utilizable para saludar, sin quedar como "Hola Sin nombre,". */
+// Palabras que delatan a una institución. A una escuela se le saluda con su
+// nombre completo; a una persona, solo por su nombre de pila.
+// Ojo con los límites de palabra: sin \b, "S.A." matcheaba el "sa" de
+// "ROSAURA" y la trataba como si fuera una empresa.
+const ES_ORGANIZACION = /\b(colegio|escuela|universidad|instituto|preparatoria|secundaria|primaria|kinder|hospital|cl[ií]nica|empresa|corporativo|grupo|fundaci[oó]n|asociaci[oó]n|sindicato|ayuntamiento|secretar[ií]a|bomberos|cruz roja|s\.a\.|s\.c\.|sa de cv|imss|issste|dif|conalep|cbtis|cecyte|unam|ipn|udg|uaem)\b|protecci[oó]n civil|&/i;
+
+/** Deja "colegio valencia & lancaster" como "Colegio Valencia & Lancaster". */
+function capitalizar(texto: string) {
+  const MINUSCULAS = new Set(["de", "del", "la", "las", "los", "y", "e", "en", "a"]);
+  return texto
+    .split(/\s+/)
+    .map((original, i) => {
+      // Una palabra corta escrita toda en mayúsculas es una sigla (ICEL, UNAM,
+      // IMSS): se deja como está, no se convierte en "Icel".
+      if (original.length <= 5 && original === original.toUpperCase() && /[A-ZÁÉÍÓÚÑ]/.test(original)) {
+        return original;
+      }
+      const palabra = original.toLowerCase();
+      if (i > 0 && MINUSCULAS.has(palabra)) return palabra;
+      if (palabra.length <= 1 || !/[a-záéíóúñ]/.test(palabra)) return palabra.toUpperCase();
+      return palabra[0].toUpperCase() + palabra.slice(1);
+    })
+    .join(" ");
+}
+
+/**
+ * Con quién se abre el correo. Nunca "Hola Sin nombre," ni un nombre partido
+ * a la mitad: si es institución va completa, si es persona va su nombre de pila.
+ */
 function saludo(dirigida: string | null) {
-  const n = String(dirigida ?? "").trim();
-  if (!n || /^sin nombre$/i.test(n)) return "Hola,";
-  return `Hola ${n.split(/\s+/).slice(0, 2).join(" ")},`;
+  // Varios "nombres" traen la dirección pegada: "Escuela en CDMX (Calzada de
+  // los Misterios, ...)". Para saludar basta lo que va antes del paréntesis.
+  const n = String(dirigida ?? "")
+    .split(/[(,;]/)[0]
+    .trim()
+    .replace(/\s+/g, " ");
+  if (!n || n.length < 2 || /^sin nombre$/i.test(n)) return "Hola, buen día:";
+  if (ES_ORGANIZACION.test(n)) {
+    const nombre = capitalizar(n).slice(0, 60).trim();
+    return `Hola, buen día:`.replace(/:$/, ` \u2014 ${nombre}:`);
+  }
+  return `Hola ${capitalizar(n.split(" ")[0])},`;
 }
 
 /**
