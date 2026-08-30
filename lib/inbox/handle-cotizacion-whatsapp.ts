@@ -11,6 +11,10 @@ import type { Channel } from "@/types/database";
 // El folio viaja en el propio mensaje; solo lo tiene quien recibió el correo.
 
 const PATRON = /cotizaci[oó]n\s+s\s*-?\s*(\d{4,6})/i;
+// "solicitud #a1b2c3d4": botón de la pantalla de éxito del formulario /cotizar.
+// En ese momento la cotización AÚN no existe; aquí solo se liga el chat a la
+// solicitud y se confirma — cuando Roy la envíe, saldrá también por WhatsApp.
+const PATRON_SOLICITUD = /solicitud\s*#\s*([a-f0-9]{6,12})/i;
 
 export async function handleCotizacionWhatsApp(
   conversationId: string,
@@ -20,6 +24,11 @@ export async function handleCotizacionWhatsApp(
   content: string | null
 ): Promise<boolean> {
   if (!content) return false;
+
+  // ¿Es la activación desde el formulario (aún sin folio)?
+  const ms = content.match(PATRON_SOLICITUD);
+  if (ms) return await ligarSolicitud(conversationId, contactId, channel, externalId, ms[1].toLowerCase());
+
   const m = content.match(PATRON);
   if (!m) return false;
   const folio = Number(m[1]);
@@ -80,6 +89,69 @@ export async function handleCotizacionWhatsApp(
       .update({ conversation_id: conversationId, contact_id: contactId })
       .eq("id", cot.quote_request_id)
       .is("conversation_id", null);
+  }
+  return true;
+}
+
+
+async function ligarSolicitud(
+  conversationId: string,
+  contactId: string,
+  channel: Channel,
+  externalId: string,
+  ref: string
+): Promise<boolean> {
+  const supabase = createAdminClient();
+  // La referencia son los primeros caracteres del uuid sin guiones. Se busca
+  // entre las solicitudes recientes: son pocas y así no hace falta castear
+  // uuids en la base.
+  const { data: recientes } = await supabase
+    .from("quote_requests")
+    .select("id, nombre, organizacion, conversation_id")
+    .order("created_at", { ascending: false })
+    .limit(300);
+  const sol = (recientes ?? []).find((q) => String(q.id).replace(/-/g, "").startsWith(ref));
+  if (!sol) return false; // referencia desconocida: que conteste la IA normal
+
+  await supabase
+    .from("quote_requests")
+    .update({ conversation_id: conversationId, contact_id: contactId })
+    .eq("id", sol.id);
+
+  // Si la cotización ya existe y ya se envió, mejor entregarla de una vez.
+  const { data: cot } = await supabase
+    .from("cotizaciones_emitidas")
+    .select("folio, pdf_url, estado")
+    .eq("quote_request_id", sol.id)
+    .neq("estado", "borrador")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const nombre = (sol.nombre ?? "").split(/\s+/)[0] || "";
+  const texto = cot?.pdf_url
+    ? `Listo${nombre ? " " + nombre : ""}! Aqui esta tu cotizacion S${cot.folio} 📄\n${cot.pdf_url}\n\nCualquier duda o ajuste, dime por aqui con confianza 💪`
+    : `Listo${nombre ? " " + nombre : ""}! Ya quedo activado tu WhatsApp ✅ En cuanto tu cotizacion este lista te la mando por aqui mismo, ademas de tu correo. Cualquier duda mientras tanto, aqui ando 💪`;
+
+  const { data: mensaje, error } = await supabase
+    .from("messages")
+    .insert({
+      conversation_id: conversationId,
+      contact_id: contactId,
+      channel,
+      direction: "out",
+      sender_type: "ai",
+      content: texto,
+    })
+    .select()
+    .single();
+  if (error) { console.error("ligar-solicitud insert:", error); return false; }
+  try {
+    const metaId = await sendForChannel(channel, externalId, texto);
+    await supabase.from("messages").update({ status: "sent", meta_message_id: metaId }).eq("id", mensaje.id);
+  } catch (e) {
+    console.error("ligar-solicitud envío:", e);
+    return false;
   }
   return true;
 }

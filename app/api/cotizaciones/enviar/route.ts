@@ -96,11 +96,55 @@ export async function POST(req: NextRequest) {
       console.error("Registro de hilo de cotización:", e);
     }
 
+    // Si el cliente ACTIVÓ su chat (botón del formulario o del correo), la
+    // cotización le llega completa por WhatsApp, con su PDF — no solo el
+    // aviso. Si esto sale, la plantilla de abajo ya no hace falta.
+    let chatEnviado = false;
+    if (cot.quote_request_id) {
+      try {
+        const { data: qr2 } = await supabase
+          .from("quote_requests")
+          .select("conversation_id, contact_id, nombre")
+          .eq("id", cot.quote_request_id)
+          .maybeSingle();
+        if (qr2?.conversation_id && qr2?.contact_id) {
+          const { data: conv } = await supabase
+            .from("conversations")
+            .select("id, channel, contact:contacts(external_id)")
+            .eq("id", qr2.conversation_id)
+            .maybeSingle();
+          const externalId = (conv?.contact as { external_id?: string } | null)?.external_id;
+          if (conv?.channel === "whatsapp" && externalId) {
+            const nombrePila = (qr2.nombre || cot.dirigida || "").trim().split(/\s+/)[0];
+            const texto =
+              `${nombrePila ? nombrePila + ", tu" : "Tu"} cotizacion S${cot.folio} ya esta lista 📄\n${cot.pdf_url}\n\n` +
+              `Tambien te llego a tu correo. Cualquier duda o ajuste, dime por aqui con confianza 💪`;
+            const metaId = await sendForChannel("whatsapp", externalId, texto);
+            await supabase.from("messages").insert({
+              conversation_id: conv.id,
+              contact_id: qr2.contact_id,
+              channel: "whatsapp",
+              direction: "out",
+              sender_type: "ai",
+              content: texto,
+              status: "sent",
+              meta_message_id: metaId,
+            });
+            chatEnviado = true;
+          }
+        }
+      } catch (e) {
+        // La ventana de 24 h pudo cerrarse: no truena nada, la plantilla y el
+        // correo cubren al cliente.
+        console.error("Cotización por chat ligado:", e);
+      }
+    }
+
     // Aviso por WhatsApp al cliente (si dejó teléfono en su solicitud): le
     // decimos que su cotización ya está en su correo y que el seguimiento es
     // por ahí. Plantilla UTILITY "aviso_cotizacion_enviada". Nunca truena el
     // envío principal: si falla, solo se reporta.
-    if (cot.quote_request_id) {
+    if (cot.quote_request_id && !chatEnviado) {
       try {
         const { data: qr } = await supabase
           .from("quote_requests")
