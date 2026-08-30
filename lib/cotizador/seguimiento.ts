@@ -248,8 +248,15 @@ export function redactar(p: Pendiente): { asunto: string; html: string; texto: s
   };
 
   const { asunto, parrafos } = cuerpos[p.paso];
+  const botonWhatsApp = `<table width="100%" cellpadding="0" cellspacing="0" style="background:#F0FDF4;border-left:4px solid #16A34A;border-radius:0 8px 8px 0;margin:20px 0;"><tr><td style="padding:14px 18px;">
+<p style="margin:0 0 10px;color:#14532D;font-size:14px;font-weight:700;">📲 ¿Prefiere seguirlo por WhatsApp?</p>
+<p style="margin:0 0 12px;color:#166534;font-size:13px;line-height:1.6;">Toque el botón y envíe el mensaje que ya viene escrito: su cotización le llega por ese medio y ahí mismo resolvemos cualquier duda.</p>
+<a href="https://wa.me/5222225329014?text=${encodeURIComponent(`Hola! Quiero recibir mi cotización S${c.folio} por WhatsApp 📲`)}" style="display:inline-block;background:#16A34A;color:#ffffff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:14px;font-weight:700;">Recibirla por WhatsApp</a>
+</td></tr></table>`;
+
   const html = `<div style="max-width:540px;margin:0 auto;padding:24px 16px;font-family:Arial,sans-serif;color:#222;font-size:15px;line-height:1.7;">
 ${parrafos.map((t) => `<p>${t}</p>`).join("\n")}
+${botonWhatsApp}
 <p style="margin-top:26px;">
 <strong>TUM I. Rodrigo Mata Santillana</strong><br />
 <span style="color:#555;font-size:13.5px;">Director · VITA RESCUE</span><br />

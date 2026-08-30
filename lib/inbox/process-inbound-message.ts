@@ -3,6 +3,7 @@ import { ingestInboundMessage } from "@/lib/inbox/ingest-inbound-message";
 import { sendInviteFollowUpIfFirstReply } from "@/lib/inbox/send-invite-follow-up";
 import { sendKeywordReplyIfMatch } from "@/lib/inbox/handle-keyword-reply";
 import { handleCampaignReply } from "@/lib/inbox/handle-campaign-reply";
+import { handleCotizacionWhatsApp } from "@/lib/inbox/handle-cotizacion-whatsapp";
 import { checkEscalation } from "@/lib/ai/check-escalation";
 import { royFollowsInstagramUser } from "@/lib/meta/check-roy-follows";
 import { modoEventoHyroxActivo } from "@/lib/hyrox/config";
@@ -80,6 +81,13 @@ export async function processInboundMessage(msg: InboundMessage) {
     const respondido = await handleCampaignReply(conversation.id, contact.id, msg.externalId, msg.content);
     if (respondido) return;
   }
+
+  // "Quiero mi cotización S####" (botón del correo de cotización) -> se le
+  // manda su PDF al instante y la conversación queda ligada al CRM.
+  const cotizacionEnviada = await handleCotizacionWhatsApp(
+    conversation.id, contact.id, msg.channel, msg.externalId, msg.content
+  );
+  if (cotizacionEnviada) return;
 
   // Palabra clave ("responde CURSO a esta historia") -> link de registro,
   // determinista. Va antes del seguimiento: si responden "curso" a la
