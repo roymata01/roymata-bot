@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
             <tr><td style="padding:14px 18px;">
               <p style="margin:0 0 10px;color:#14532D;font-size:14px;font-weight:700;">📲 ¿Prefiere seguirlo por WhatsApp?</p>
               <p style="margin:0 0 12px;color:#166534;font-size:13px;line-height:1.6;">Toque el botón y envíe el mensaje que ya viene escrito: su cotización le llega también por ese medio y ahí mismo resolvemos cualquier duda.</p>
-              <a href="https://wa.me/522225329014?text=${encodeURIComponent(`Hola! Quiero recibir mi cotización S${cot.folio} por WhatsApp 📲`)}" style="display:inline-block;background:#16A34A;color:#ffffff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:14px;font-weight:700;">Recibirla por WhatsApp</a>
+              <a href="https://wa.me/5212224356482?text=${encodeURIComponent(`Hola! Quiero recibir mi cotización S${cot.folio} por WhatsApp 📲`)}" style="display:inline-block;background:#16A34A;color:#ffffff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:14px;font-weight:700;">Recibirla por WhatsApp</a>
             </td></tr>
           </table>
           <p style="margin-top:24px;">TUM I. Rodrigo Mata Santillana<br />
