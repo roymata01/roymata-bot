@@ -47,7 +47,41 @@ export async function GET(req: NextRequest) {
       console.error("Cotizador auto:", e);
     }
 
-    if (auto?.apto) {
+    // NIVEL 2 (pedido de Roy 2026-09-20): los casos estándar de México se
+    // ENVÍAN solos, sin esperar el botón de aprobar. A Roy solo se le informa.
+    let enviadaAuto = false;
+    if (auto?.apto && q.correo) {
+      try {
+        const envio = await fetch("https://sistema.vitarescue.com.mx/api/cotizaciones/enviar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.CRON_SECRET}` },
+          body: JSON.stringify({ cotizacion_id: auto.cotizacionId, via: "correo", correo: q.correo }),
+        });
+        enviadaAuto = envio.ok;
+        if (!envio.ok) console.error(`Envío automático S${auto.folio} falló:`, envio.status, (await envio.text()).slice(0, 200));
+      } catch (e) {
+        console.error(`Envío automático S${auto.folio}:`, e);
+      }
+      // Enviada o no, esta solicitud ya no debe re-generarse en la siguiente
+      // corrida: si el envío falló, Roy la manda desde el link de aprobar.
+      await supabase.from("quote_requests").update({ alertada: true }).eq("id", q.id);
+    }
+
+    if (auto?.apto && enviadaAuto) {
+      plantilla = {
+        name: "cotizacion_enviada_auto",
+        components: [
+          {
+            type: "body",
+            parameters: [
+              { type: "text", text: `S${auto.folio}` },
+              { type: "text", text: auto.resumen.slice(0, 500) },
+            ],
+          },
+        ],
+      };
+    } else if (auto?.apto) {
+      // Se generó pero el envío automático falló: que Roy la dispare él
       plantilla = {
         name: "cotizacion_lista_aprobar",
         components: [
@@ -111,18 +145,25 @@ export async function GET(req: NextRequest) {
       if (process.env.RESEND_API_KEY) {
         const { Resend } = await import("resend");
         const resend = new Resend(process.env.RESEND_API_KEY);
-        const cuerpo = auto?.apto
-          ? `<p>Se generó sola la cotización <strong>S${auto.folio}</strong>:</p>
+        const cuerpo = auto?.apto && enviadaAuto
+          ? `<p>✅ La cotización <strong>S${auto.folio}</strong> se generó y <strong>ya se envió sola</strong> al cliente:</p>
 <p style="background:#f4f4f5;padding:12px;border-radius:8px;">${auto.resumen}</p>
-<p><a href="https://sistema.vitarescue.com.mx/aprobar/${auto.linkAprobar}" style="display:inline-block;background:#1a56db;color:#fff;font-weight:700;padding:12px 20px;border-radius:10px;text-decoration:none;">Revisar y aprobar →</a></p>
-<p style="color:#777;font-size:13px;">Al aprobar se envía sola al cliente. Si prefieres cambiarla, hazlo desde tu panel de Cotizaciones.</p>`
+<p style="color:#777;font-size:13px;">El seguimiento correrá solo y te avisamos si responde. No necesitas hacer nada.</p>`
+          : auto?.apto
+          ? `<p>Se generó sola la cotización <strong>S${auto.folio}</strong>, pero el envío automático falló:</p>
+<p style="background:#f4f4f5;padding:12px;border-radius:8px;">${auto.resumen}</p>
+<p><a href="https://sistema.vitarescue.com.mx/aprobar/${auto.linkAprobar}" style="display:inline-block;background:#1a56db;color:#fff;font-weight:700;padding:12px 20px;border-radius:10px;text-decoration:none;">Revisar y enviar →</a></p>`
           : `<p>Nueva solicitud de cotización de <strong>${quien}</strong>${q.num_personas ? ` (${q.num_personas} personas)` : ""}.</p>
 <p style="color:#777;font-size:13px;">Esta hay que hacerla a mano${auto && !auto.apto ? `: ${auto.razon}` : ""}.</p>
 <p><a href="https://cursos.vitarescue.com.mx/admin/cotizaciones" style="display:inline-block;background:#1a56db;color:#fff;font-weight:700;padding:12px 20px;border-radius:10px;text-decoration:none;">Abrir Cotizaciones →</a></p>`;
         await resend.emails.send({
           from: "Sistema VITA <contacto@vitarescue.com.mx>",
           to: "roymataparamedic@gmail.com",
-          subject: auto?.apto ? `📋 Cotización S${auto.folio} lista para aprobar — ${quien}` : `🔔 Nueva solicitud de cotización — ${quien}`,
+          subject: auto?.apto && enviadaAuto
+            ? `✅ Cotización S${auto.folio} enviada automáticamente — ${quien}`
+            : auto?.apto
+              ? `📋 Cotización S${auto.folio} lista para enviar — ${quien}`
+              : `🔔 Nueva solicitud de cotización — ${quien}`,
           html: `<div style="max-width:540px;margin:0 auto;padding:24px 16px;font-family:Arial,sans-serif;color:#222;font-size:15px;line-height:1.7;">${cuerpo}</div>`,
         });
       }

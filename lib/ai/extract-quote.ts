@@ -16,6 +16,10 @@ interface QuoteData {
   num_personas: number | null;
   correo: string | null;
   telefono: string | null;
+  curso: string | null;
+  ciudad: string | null;
+  estado: string | null;
+  pais: string | null;
   notas: string | null;
 }
 
@@ -47,17 +51,25 @@ export async function maybeCaptureQuoteRequest(conversationId: string, contactId
       .map((m) => `${m.direction === "in" ? "CLIENTE" : "BOT"}: ${m.content}`)
       .join("\n");
 
+    // Catálogo activo: si el curso pedido coincide con uno de estos nombres,
+    // el cotizador automático puede generar y ENVIAR la cotización solo.
+    const { data: catalogo } = await supabase
+      .from("cotizador_cursos").select("nombre").eq("activo", true);
+    const nombresCatalogo = (catalogo ?? []).map((c) => c.nombre);
+
     const anthropic = createAnthropicClient();
     const response = await anthropic.messages.create({
       model: "claude-haiku-4-5",
-      max_tokens: 300,
-      system: `Analiza esta conversación de Instagram/Messenger de Roy Mata (paramédico, cursos de primeros auxilios).
+      max_tokens: 400,
+      system: `Analiza esta conversación de Instagram/Messenger/WhatsApp de Roy Mata (paramédico, cursos de primeros auxilios).
 
 ¿El cliente está pidiendo un curso/capacitación PARA UN GRUPO (empresa, escuela, universidad, brigada, equipo, varias personas)? Preguntar por la clase gratis individual o un curso para sí mismo NO cuenta.
 
 Responde ÚNICAMENTE con JSON válido, sin texto extra:
-{"es_cotizacion": true/false, "nombre": "nombre completo del cliente o null", "organizacion": "empresa/escuela o null", "num_personas": número o null, "correo": "... o null", "telefono": "... o null", "notas": "resumen de 1 línea: qué curso pide + su ciudad/estado/país si lo mencionó, o null"}
+{"es_cotizacion": true/false, "nombre": "nombre completo del cliente o null", "organizacion": "empresa/escuela o null", "num_personas": número o null, "correo": "... o null", "telefono": "... o null", "curso": "cuál curso pide o null", "ciudad": "su ciudad o null", "estado": "su estado o null", "pais": "su país o null", "notas": "resumen de 1 línea o null"}
 
+Para "curso": si lo que pide corresponde a uno de estos cursos del catálogo, usa EXACTAMENTE ese nombre: ${nombresCatalogo.join(" | ") || "Primeros auxilios básicos en adultos"}. Si pide otra cosa, escribe lo que pidió tal cual.
+Para "estado": el estado mexicano con su nombre oficial (ej. "Puebla", "Estado de México", "Ciudad de México"). Para "pais": "México" si es de México.
 Solo incluye datos que el CLIENTE haya dicho explícitamente. Si un dato no aparece, usa null.`,
       messages: [{ role: "user", content: transcript }],
     });
@@ -70,7 +82,30 @@ Solo incluye datos que el CLIENTE haya dicho explícitamente. Si un dato no apar
     const parsed = JSON.parse(raw.replace(/^```json?\s*|\s*```$/g, "")) as QuoteData;
     if (!parsed.es_cotizacion) return;
 
-    // no pisar datos ya capturados con nulls
+    // no pisar datos ya capturados con nulls: lo estructurado previo se
+    // recupera de las notas viejas (mismo formato que usa el formulario web)
+    const prevNotas = existing?.notas ?? "";
+    const prev = {
+      curso: prevNotas.match(/Curso:\s*([^·]+)/)?.[1]?.trim() || null,
+      lugar: prevNotas.match(/Lugar:\s*([^·]+)/)?.[1]?.trim() || null,
+    };
+    const curso = parsed.curso ?? prev.curso;
+    const lugarPartes = [parsed.ciudad, parsed.estado, parsed.pais].filter(Boolean);
+    const lugar = lugarPartes.length >= 2 ? lugarPartes.join(", ") : prev.lugar;
+    // Notas en el formato del formulario web: así el cotizador automático
+    // también puede resolver las solicitudes que llegan por chat.
+    const resumen = parsed.notas ?? "";
+    const notas =
+      [
+        "💬 Solicitud desde el chat",
+        lugar ? `Lugar: ${lugar}` : null,
+        curso ? `Curso: ${curso}` : null,
+        "Instructor Roy: no",
+        resumen || null,
+      ]
+        .filter(Boolean)
+        .join(" · ") || null;
+
     const payload = {
       conversation_id: conversationId,
       contact_id: contactId,
@@ -79,7 +114,7 @@ Solo incluye datos que el CLIENTE haya dicho explícitamente. Si un dato no apar
       num_personas: parsed.num_personas ?? existing?.num_personas ?? null,
       correo: parsed.correo ?? existing?.correo ?? null,
       telefono: parsed.telefono ?? existing?.telefono ?? null,
-      notas: parsed.notas ?? existing?.notas ?? null,
+      notas,
     };
 
     await supabase.from("quote_requests").upsert(payload, { onConflict: "conversation_id" });

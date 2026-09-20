@@ -58,8 +58,10 @@ export async function evaluarYGenerar(solicitud: QuoteRow): Promise<EvaluacionAu
   const notas = solicitud.notas || "";
   const datos = parseNotas(notas);
 
-  if (!datos.esWeb) return { apto: false, razon: "vino del chat (datos sin estructura)" };
-  if (!datos.esMexico) return { apto: false, razon: "fuera de México (curso en línea, precio manual)" };
+  // Web y chat entran por igual: lo que importa es que los datos estén
+  // completos, no de dónde vinieron (pedido de Roy 2026-09-20 tras encontrar
+  // chats con la cotización prometida y nunca enviada).
+  if (!datos.esMexico) return { apto: false, razon: "fuera de México o sin lugar claro (precio manual)" };
   const personas = Number(solicitud.num_personas);
   if (!Number.isFinite(personas) || personas < 10 || personas > 120) {
     return { apto: false, razon: `grupo de ${solicitud.num_personas ?? "?"} personas (fuera de 10-120)` };
@@ -67,13 +69,22 @@ export async function evaluarYGenerar(solicitud: QuoteRow): Promise<EvaluacionAu
   const correo = (solicitud.correo || "").trim().toLowerCase();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) return { apto: false, razon: "sin correo válido" };
 
-  // Curso en el catálogo
-  const { data: curso } = await supabase
+  // Curso en el catálogo — tolerante a variaciones del chat ("primeros
+  // auxilios basicos" debe encontrar "Primeros auxilios básicos en adultos")
+  const norm = (s: string) =>
+    s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+  const { data: activos } = await supabase
     .from("cotizador_cursos")
-    .select("nombre, precio_unitario, activo")
-    .eq("nombre", datos.curso)
-    .maybeSingle();
-  if (!curso || !curso.activo) return { apto: false, razon: `curso "${datos.curso}" fuera del catálogo` };
+    .select("nombre, precio_unitario")
+    .eq("activo", true);
+  const pedido = norm(datos.curso);
+  const curso = (activos ?? []).find((c) => {
+    const cat = norm(c.nombre);
+    return cat === pedido || cat.includes(pedido) || pedido.includes(cat) ||
+      // coincide si comparten el arranque ("primeros auxilios basicos…")
+      (pedido.length >= 12 && cat.startsWith(pedido.slice(0, 12)));
+  });
+  if (!pedido || !curso) return { apto: false, razon: `curso "${datos.curso || "?"}" fuera del catálogo` };
 
   // Viáticos del tarifario (Puebla capital tiene fila propia)
   const llaveTarifa =
