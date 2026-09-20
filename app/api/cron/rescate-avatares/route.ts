@@ -19,6 +19,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
+  // ?debug=1: prueba cruda del token de IG en PRODUCCIÓN (no toca nada)
+  if (new URL(req.url).searchParams.get("debug") === "1") {
+    const r = await fetch(
+      `https://graph.instagram.com/v21.0/me?access_token=${process.env.IG_PAGE_ACCESS_TOKEN}`
+    ).then((x) => x.json()).catch((e) => ({ fetch_error: String(e) }));
+    const f = await fetch(
+      `https://graph.facebook.com/v21.0/me?access_token=${process.env.FB_PAGE_ACCESS_TOKEN}`
+    ).then((x) => x.json()).catch((e) => ({ fetch_error: String(e) }));
+    return NextResponse.json({ ig: r, fb: f });
+  }
+
   const supabase = createAdminClient();
   const { data: convos } = await supabase
     .from("conversations")
