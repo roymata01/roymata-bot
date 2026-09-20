@@ -71,11 +71,31 @@ export async function avisarRespuestaCotizacionWA(externalId: string, texto: str
 
     if (yaAvisado) return;
 
+    // El bot atiende las dudas normales solo (KB "atencion_cotizaciones");
+    // a Roy únicamente le llega lo que requiere SU decisión: confirmar,
+    // agendar, pagar, negociar. Si el clasificador falla, se avisa igual —
+    // mejor una alerta de más que una venta perdida.
+    let requiereRoy = true;
+    try {
+      const { createAnthropicClient } = await import("@/lib/anthropic");
+      const r = await createAnthropicClient().messages.create({
+        model: "claude-haiku-4-5",
+        max_tokens: 60,
+        system: `Un cliente que recibió una cotización de cursos de primeros auxilios responde por WhatsApp. ¿Su mensaje requiere la intervención del DUEÑO (quiere CONFIRMAR el curso, agendar fecha, pagar, pedir datos bancarios, negociar precio, o hablar con Roy en persona)? Las dudas informativas (qué incluye, duración, vigencia, si factura, si no le llegó el correo, agradecimientos, "lo voy a revisar") las responde el bot solo y NO requieren al dueño. Responde ÚNICAMENTE JSON: {"requiere_roy": true/false}`,
+        messages: [{ role: "user", content: contenido.slice(0, 800) }],
+      });
+      const raw = r.content.filter((b) => b.type === "text").map((b) => (b as { text: string }).text).join("");
+      requiereRoy = !!JSON.parse(raw.replace(/^```json?\s*|\s*```$/g, "")).requiere_roy;
+    } catch (e) {
+      console.error("Clasificador respuesta-wa:", e);
+    }
+    if (!requiereRoy) return;
+
     const quien = sols[0].nombre || sols[0].organizacion || `+${tel}`;
     await sendWhatsAppPlantilla(NUMERO_ROY, "alerta_respuesta_cliente", [
       `S${cot.folio}`,
-      quien,
-      contenido.slice(0, 160),
+      `${quien} (quiere avanzar)`,
+      contenido.slice(0, 150),
     ]);
   } catch (e) {
     console.error("avisarRespuestaCotizacionWA:", e);
