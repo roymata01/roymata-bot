@@ -24,10 +24,14 @@ export async function GET(req: NextRequest) {
     const r = await fetch(
       `https://graph.instagram.com/v21.0/me?access_token=${process.env.IG_PAGE_ACCESS_TOKEN}`
     ).then((x) => x.json()).catch((e) => ({ fetch_error: String(e) }));
+    const rBearer = await fetch("https://graph.instagram.com/v21.0/me", {
+      headers: { Authorization: `Bearer ${process.env.IG_PAGE_ACCESS_TOKEN}` },
+    }).then((x) => x.json()).catch((e) => ({ fetch_error: String(e) }));
+    const huella = (process.env.IG_PAGE_ACCESS_TOKEN || "").slice(0, 8) + "…" + (process.env.IG_PAGE_ACCESS_TOKEN || "").slice(-6);
     const f = await fetch(
       `https://graph.facebook.com/v21.0/me?access_token=${process.env.FB_PAGE_ACCESS_TOKEN}`
     ).then((x) => x.json()).catch((e) => ({ fetch_error: String(e) }));
-    return NextResponse.json({ ig: r, fb: f });
+    return NextResponse.json({ ig_query: r, ig_bearer: rBearer, huella, fb: f });
   }
 
   const supabase = createAdminClient();
