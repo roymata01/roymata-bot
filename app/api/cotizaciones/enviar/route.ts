@@ -155,24 +155,48 @@ export async function POST(req: NextRequest) {
         if (digitos.length >= 10) {
           const numero = digitos.length === 10 ? `52${digitos}` : digitos;
           const nombrePila = (qr?.nombre || cot.dirigida || "").trim().split(/\s+/)[0] || "hola";
-          const wa = await fetch(`https://graph.facebook.com/v21.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              messaging_product: "whatsapp",
-              to: numero,
-              type: "template",
-              template: {
-                name: "aviso_cotizacion_enviada",
-                language: { code: "es_MX" },
-                components: [{ type: "body", parameters: [
-                  { type: "text", text: nombrePila.slice(0, 60) },
-                  { type: "text", text: destino.slice(0, 100) },
-                ] }],
-              },
-            }),
-          });
-          if (!wa.ok) console.error("Aviso WhatsApp de cotización falló:", wa.status, (await wa.text()).slice(0, 200));
+          const manda = (template: unknown) =>
+            fetch(`https://graph.facebook.com/v21.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`, "Content-Type": "application/json" },
+              body: JSON.stringify({ messaging_product: "whatsapp", to: numero, type: "template", template }),
+            });
+
+          // Primero el PDF directo por WhatsApp (pedido de Roy 2026-09-20).
+          // Si esa plantilla aún no está aprobada o el PDF no es público,
+          // cae al aviso simple de siempre ("ya está en tu correo").
+          let wa: Response | null = null;
+          if (cot.pdf_url) {
+            wa = await manda({
+              name: "cotizacion_documento",
+              language: { code: "es_MX" },
+              components: [
+                {
+                  type: "header",
+                  parameters: [{ type: "document", document: { link: cot.pdf_url, filename: `Cotizacion-S${cot.folio}-VITA-RESCUE.pdf` } }],
+                },
+                {
+                  type: "body",
+                  parameters: [
+                    { type: "text", text: nombrePila.slice(0, 60) },
+                    { type: "text", text: `S${cot.folio}` },
+                  ],
+                },
+              ],
+            });
+            if (!wa.ok) console.error("Cotización PDF por WhatsApp falló:", wa.status, (await wa.text()).slice(0, 200));
+          }
+          if (!wa?.ok) {
+            wa = await manda({
+              name: "aviso_cotizacion_enviada",
+              language: { code: "es_MX" },
+              components: [{ type: "body", parameters: [
+                { type: "text", text: nombrePila.slice(0, 60) },
+                { type: "text", text: destino.slice(0, 100) },
+              ] }],
+            });
+            if (!wa.ok) console.error("Aviso WhatsApp de cotización falló:", wa.status, (await wa.text()).slice(0, 200));
+          }
         }
       } catch (e) {
         console.error("Aviso WhatsApp de cotización:", e);
