@@ -112,6 +112,18 @@ export async function POST(req: NextRequest) {
           headers,
         });
       } else if (!esRoy) {
+        // Aviso inmediato al WhatsApp personal de Roy (el Gmail se le pasa)
+        try {
+          const { sendWhatsAppPlantilla } = await import("@/lib/meta/send-whatsapp-template");
+          const extracto = (correo.text || asunto || "").trim().slice(0, 160);
+          await sendWhatsAppPlantilla(
+            process.env.ROY_WHATSAPP_ALERTAS || "522228067240",
+            "alerta_respuesta_cliente",
+            [folio ? `S${folio}` : "(sin folio)", remitente, extracto]
+          );
+        } catch (e) {
+          console.error("Inbound: aviso WhatsApp a Roy falló:", e);
+        }
         // Escribió el cliente → copia a Roy, con responder ligado al folio
         await resend.emails.send({
           from: "Instituto VITA <contacto@vitarescue.com.mx>",

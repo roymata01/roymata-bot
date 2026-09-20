@@ -58,6 +58,10 @@ export async function POST(req: NextRequest) {
         continue;
       }
       await processInboundMessage(message);
+      // Si es un cliente con cotización enviada, se registra en su hilo
+      // (detiene el seguimiento) y se le avisa a Roy a su WhatsApp personal.
+      const { avisarRespuestaCotizacionWA } = await import("@/lib/cotizador/respuesta-wa");
+      await avisarRespuestaCotizacionWA(message.externalId, message.content ?? "");
     }
   } catch (error) {
     console.error("Error procesando mensaje de WhatsApp:", error);

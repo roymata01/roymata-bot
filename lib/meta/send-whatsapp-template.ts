@@ -29,6 +29,45 @@ export async function sendWhatsAppTemplate(
   return data.messages?.[0]?.id as string;
 }
 
+// Igual que sendWhatsAppTemplate pero con N parámetros de cuerpo (los botones
+// URL fijos de la plantilla no necesitan nada al enviar).
+export async function sendWhatsAppPlantilla(
+  to: string,
+  templateName: string,
+  params: string[]
+): Promise<string> {
+  const url = `https://graph.facebook.com/v21.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      to,
+      type: "template",
+      template: {
+        name: templateName,
+        language: { code: "es_MX" },
+        components: [
+          {
+            type: "body",
+            // WhatsApp rechaza parámetros vacíos o con saltos de línea
+            parameters: params.map((p) => ({
+              type: "text",
+              text: (p || "—").replace(/\s+/g, " ").trim().slice(0, 200) || "—",
+            })),
+          },
+        ],
+      },
+    }),
+  });
+  if (!res.ok) throw new Error(`WhatsApp plantilla falló: ${res.status} ${await res.text()}`);
+  const data = await res.json();
+  return data.messages?.[0]?.id as string;
+}
+
 // Normaliza a E.164 mexicano: 52 + 10 dígitos. Acepta con/sin +, con/sin el
 // "1" de móvil viejo, con lada 044/045. Devuelve null si no parece válido.
 export function normalizaTelMx(raw: string): string | null {

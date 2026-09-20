@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { pendientesDeHoy, filtrar, redactar, porWhatsApp } from "@/lib/cotizador/seguimiento";
+import { pendientesDeHoy, filtrar, redactar, porWhatsApp, telefonoInterno } from "@/lib/cotizador/seguimiento";
+import { sendWhatsAppPlantilla, normalizaTelMx } from "@/lib/meta/send-whatsapp-template";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -71,6 +72,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Falta RESEND_API_KEY" }, { status: 500 });
   }
   const resend = new Resend(process.env.RESEND_API_KEY);
+  // Quien pidió BAJA por WhatsApp no recibe seguimiento por ahí (el correo sí sigue)
+  const { data: bajas } = await supabase.from("wa_optouts").select("phone");
+  const optouts = new Set((bajas ?? []).map((b) => String(b.phone)));
   const enviados: string[] = [];
   const fallos: string[] = [];
 
@@ -108,7 +112,26 @@ export async function GET(req: NextRequest) {
         from_email: "contacto@vitarescue.com.mx", to_email: p.destino,
         subject: asunto, body_text: texto,
       });
-      enviados.push(`S${c.folio} paso ${p.paso} → ${c.dirigida ?? p.destino}`);
+      let notaWA = "";
+      // Primer recordatorio (día 3): además del correo, un WhatsApp al
+      // cliente — en México ahí sí contestan. Solo números mexicanos, solo
+      // una vez, y nunca a quien pidió BAJA. Si falla, el correo ya salió.
+      if (p.paso === 1) {
+        try {
+          const sol = (sols.data ?? []).find((s) => s.id === c.quote_request_id);
+          const tel = normalizaTelMx(sol?.telefono ?? "");
+          if (tel && !telefonoInterno(tel) && !optouts.has(tel)) {
+            await sendWhatsAppPlantilla(tel, "seguimiento_cotizacion", [
+              sol?.nombre || sol?.organizacion || "estimado cliente",
+              `S${c.folio}`,
+            ]);
+            notaWA = " · 💬 WhatsApp también";
+          }
+        } catch (e) {
+          console.error(`Seguimiento WA S${c.folio}:`, e);
+        }
+      }
+      enviados.push(`S${c.folio} paso ${p.paso} → ${c.dirigida ?? p.destino}${notaWA}`);
     } catch (e) {
       fallos.push(`S${c.folio}: ${e instanceof Error ? e.message : String(e)}`);
     }
