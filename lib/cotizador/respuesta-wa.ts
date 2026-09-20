@@ -15,7 +15,9 @@ const DIAS_VENTANA = 45; // solo cotizaciones recientes; lo viejo ya se enfrió
 
 export async function avisarRespuestaCotizacionWA(externalId: string, texto: string) {
   try {
-    const tel = normalizaTelMx(externalId);
+    // Mexicanos normalizados; extranjeros con su lada tal cual llega de Meta
+    const digitos = String(externalId || "").replace(/\D/g, "");
+    const tel = normalizaTelMx(digitos) ?? (digitos.length >= 10 && digitos.length <= 15 ? digitos : null);
     if (!tel || telefonoInterno(tel)) return;
     const contenido = (texto || "").trim();
     if (!contenido) return; // audios/imágenes: el bot los maneja aparte
@@ -27,7 +29,7 @@ export async function avisarRespuestaCotizacionWA(externalId: string, texto: str
       .from("quote_requests")
       .select("id, nombre, organizacion, telefono")
       .not("telefono", "is", null)
-      .ilike("telefono", `%${tel.slice(-10)}%`);
+      .ilike("telefono", `%${tel.slice(-8)}%`);
     if (!sols?.length) return;
 
     // Su cotización enviada más reciente dentro de la ventana

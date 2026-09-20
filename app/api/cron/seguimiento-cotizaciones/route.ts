@@ -119,7 +119,9 @@ export async function GET(req: NextRequest) {
       if (p.paso === 1) {
         try {
           const sol = (sols.data ?? []).find((s) => s.id === c.quote_request_id);
-          const tel = normalizaTelMx(sol?.telefono ?? "");
+          // Mexicanos normalizados a 52+10; extranjeros pasan con su lada tal cual
+          const digitos = String(sol?.telefono ?? "").replace(/\D/g, "").replace(/^00/, "");
+          const tel = normalizaTelMx(digitos) ?? (digitos.length >= 11 && digitos.length <= 15 ? digitos : null);
           if (tel && !telefonoInterno(tel) && !optouts.has(tel)) {
             await sendWhatsAppPlantilla(tel, "seguimiento_cotizacion", [
               sol?.nombre || sol?.organizacion || "estimado cliente",

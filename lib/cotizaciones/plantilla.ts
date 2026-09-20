@@ -88,13 +88,23 @@ export function htmlCotizacion(d: DatosCotizacion): string {
       </tr>`
     : "";
 
-  const filaExtra = d.extraDescripcion && (d.extraMonto || 0) > 0
-    ? `<tr>
+  // La fila extra también sirve como NOTA sin costo (monto 0): "curso en
+  // línea", "viáticos por definir", etc. — entonces no muestra importes.
+  const filaExtra = d.extraDescripcion
+    ? (d.extraMonto || 0) > 0
+      ? `<tr>
         <td>${d.extraDescripcion}</td>
         <td class="num">1 Unidades</td>
         <td class="num">${num(d.extraMonto!)}</td>
         <td class="num">—</td>
         <td class="num">${mxn(d.extraMonto!)}</td>
+      </tr>`
+      : `<tr>
+        <td>${d.extraDescripcion}</td>
+        <td class="num">—</td>
+        <td class="num">—</td>
+        <td class="num">—</td>
+        <td class="num">$ 0.00</td>
       </tr>`
     : "";
 

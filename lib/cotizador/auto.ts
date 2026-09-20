@@ -46,6 +46,7 @@ function parseNotas(notas: string) {
   return {
     esWeb: notas.includes("Solicitud desde la página"),
     esMexico,
+    lugar,
     ciudad: partes[0] ?? "",
     estado: partes.length >= 3 ? partes[1] : "",
     curso,
@@ -58,10 +59,10 @@ export async function evaluarYGenerar(solicitud: QuoteRow): Promise<EvaluacionAu
   const notas = solicitud.notas || "";
   const datos = parseNotas(notas);
 
-  // Web y chat entran por igual: lo que importa es que los datos estén
-  // completos, no de dónde vinieron (pedido de Roy 2026-09-20 tras encontrar
-  // chats con la cotización prometida y nunca enviada).
-  if (!datos.esMexico) return { apto: false, razon: "fuera de México o sin lugar claro (precio manual)" };
+  // Web y chat entran por igual, y TODOS reciben cotización (pedido de Roy
+  // 2026-09-20): pida el curso que pida, se cotiza el único activo del
+  // catálogo (Primeros auxilios básicos). Solo frenan la falta de correo o
+  // un grupo fuera de rango.
   const personas = Number(solicitud.num_personas);
   if (!Number.isFinite(personas) || personas < 10 || personas > 120) {
     return { apto: false, razon: `grupo de ${solicitud.num_personas ?? "?"} personas (fuera de 10-120)` };
@@ -69,32 +70,39 @@ export async function evaluarYGenerar(solicitud: QuoteRow): Promise<EvaluacionAu
   const correo = (solicitud.correo || "").trim().toLowerCase();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) return { apto: false, razon: "sin correo válido" };
 
-  // Curso en el catálogo — tolerante a variaciones del chat ("primeros
-  // auxilios basicos" debe encontrar "Primeros auxilios básicos en adultos")
-  const norm = (s: string) =>
-    s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
-  const { data: activos } = await supabase
+  // El único curso del cotizador, sin importar qué pidieron
+  const { data: curso } = await supabase
     .from("cotizador_cursos")
     .select("nombre, precio_unitario")
-    .eq("activo", true);
-  const pedido = norm(datos.curso);
-  const curso = (activos ?? []).find((c) => {
-    const cat = norm(c.nombre);
-    return cat === pedido || cat.includes(pedido) || pedido.includes(cat) ||
-      // coincide si comparten el arranque ("primeros auxilios basicos…")
-      (pedido.length >= 12 && cat.startsWith(pedido.slice(0, 12)));
-  });
-  if (!pedido || !curso) return { apto: false, razon: `curso "${datos.curso || "?"}" fuera del catálogo` };
-
-  // Viáticos del tarifario (Puebla capital tiene fila propia)
-  const llaveTarifa =
-    datos.estado === "Puebla" && /^puebla$/i.test(datos.ciudad) ? "Puebla (capital)" : datos.estado;
-  const { data: tarifa } = await supabase
-    .from("cotizador_tarifas")
-    .select("estado, viaticos")
-    .eq("estado", llaveTarifa)
+    .eq("activo", true)
+    .limit(1)
     .maybeSingle();
-  if (!tarifa) return { apto: false, razon: `sin tarifa de viáticos para "${llaveTarifa}"` };
+  if (!curso) return { apto: false, razon: "no hay curso activo en el catálogo" };
+
+  // Viáticos según el caso (regla de Roy 2026-09-20):
+  //  · Extranjero → $0 y nota de curso EN LÍNEA
+  //  · México con tarifa → la tarifa del estado (Puebla capital tiene fila propia)
+  //  · México sin tarifa clara o sin lugar → $0 y nota "viáticos por definir"
+  const esExtranjero = /FUERA DE M[EÉ]XICO/i.test(notas) || (!!datos.lugar && !datos.esMexico);
+  let viaticos = 0;
+  let notaExtra = "";
+  let modalidad = "presencial";
+  if (esExtranjero) {
+    notaExtra = "Curso impartido EN LÍNEA, en vivo por Zoom (sin costo de viáticos)";
+    modalidad = "en línea (extranjero)";
+  } else {
+    const llaveTarifa =
+      datos.estado === "Puebla" && /^puebla$/i.test(datos.ciudad) ? "Puebla (capital)" : datos.estado;
+    const { data: tarifa } = llaveTarifa
+      ? await supabase.from("cotizador_tarifas").select("estado, viaticos").eq("estado", llaveTarifa).maybeSingle()
+      : { data: null };
+    if (tarifa) {
+      viaticos = Number(tarifa.viaticos) || 0;
+    } else {
+      notaExtra = "Viáticos por definir en caso de confirmar el curso";
+      modalidad = "viáticos por definir";
+    }
+  }
 
   // Generar el PDF con el pipeline real (folio oficial, borrador ligado)
   const res = await fetch("https://sistema.vitarescue.com.mx/api/cotizaciones/generar", {
@@ -105,9 +113,9 @@ export async function evaluarYGenerar(solicitud: QuoteRow): Promise<EvaluacionAu
       dirigida: solicitud.organizacion || solicitud.nombre || "Cliente",
       num_personas: personas,
       precio_unitario: Number(curso.precio_unitario),
-      viaticos: Number(tarifa.viaticos) || 0,
+      viaticos,
       instructor_roy: datos.instructorRoy,
-      extra_descripcion: "",
+      extra_descripcion: notaExtra,
       extra_monto: 0,
     }),
   });
@@ -118,9 +126,9 @@ export async function evaluarYGenerar(solicitud: QuoteRow): Promise<EvaluacionAu
   const resumen = [
     solicitud.organizacion || solicitud.nombre || "Cliente",
     `${personas} personas`,
-    `${datos.curso}`,
-    `${datos.ciudad}, ${datos.estado}`,
-    `viáticos $${Number(tarifa.viaticos).toLocaleString("es-MX")}`,
+    curso.nombre,
+    datos.lugar || "lugar sin especificar",
+    viaticos ? `viáticos $${viaticos.toLocaleString("es-MX")}` : modalidad,
     datos.instructorRoy ? "con Roy (+$5,000)" : null,
     `TOTAL $${Number(c.total).toLocaleString("es-MX")}`,
   ]
