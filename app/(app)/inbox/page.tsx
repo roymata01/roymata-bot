@@ -3,13 +3,37 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { CHANNELS } from "@/lib/channels";
-import { STATUS_ORDER, STATUS_CONFIG } from "@/lib/inbox/status";
-import { ConversationListItem } from "@/components/ConversationListItem";
+import { RedSocialIcon } from "@/components/RedSocialIcon";
+import { ConversationListItem, type QuienHablo, type CotizacionResumen } from "@/components/ConversationListItem";
 import { ChatPanel } from "@/components/ChatPanel";
-import type { Channel, Contact, Conversation, ConversationStatus, Message } from "@/types/database";
+import type { Channel, Contact, Conversation, Message } from "@/types/database";
+
+// Inbox rediseñado (2026-09-20, aprobado por Roy): la bandeja se divide en
+// 3 zonas por urgencia — 🔴 te necesitan, 🟡 las llevas tú, 🟢 el bot las
+// atiende — y abre por default mostrando SOLO lo que requiere a Roy.
 
 type ConversationWithContact = Conversation & { contact: Contact };
-type AiFilter = "all" | "answered" | "personal";
+type Modo = "urgentes" | "todas" | "cotizadas" | "personales";
+
+const ZONAS = [
+  { key: "roja", titulo: "🔴 TE NECESITAN", clase: "text-[#e5484d]" },
+  { key: "ambar", titulo: "🟡 LAS LLEVAS TÚ", clase: "text-[#f0b429]" },
+  { key: "verde", titulo: "🟢 EL BOT LAS ATIENDE", clase: "text-[#46b380]" },
+] as const;
+
+function zonaDe(c: Conversation): "roja" | "ambar" | "verde" {
+  if (c.status === "por_atender") return "roja";
+  if (c.status === "atendiendo") return "ambar";
+  return "verde";
+}
+
+function quienHabloDe(c: Conversation): QuienHablo {
+  const inAt = c.last_inbound_at ? new Date(c.last_inbound_at).getTime() : 0;
+  const msgAt = c.last_message_at ? new Date(c.last_message_at).getTime() : 0;
+  // Si el último movimiento fue entrante (con 2s de tolerancia), habló el cliente
+  if (inAt && inAt >= msgAt - 2000) return "cliente";
+  return c.status === "atendiendo" ? "tu" : "bot";
+}
 
 export default function InboxPage() {
   const supabase = useMemo(() => createBrowserSupabaseClient(), []);
@@ -19,15 +43,18 @@ export default function InboxPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [channelFilter, setChannelFilter] = useState<Channel | "all">("all");
-  const [statusFilter, setStatusFilter] = useState<ConversationStatus | "all">("all");
-  const [aiFilter, setAiFilter] = useState<AiFilter>("all");
+  const [modo, setModo] = useState<Modo>("urgentes");
   const [answeredConversationIds, setAnsweredConversationIds] = useState<Set<string>>(new Set());
+  const [cotPorConversacion, setCotPorConversacion] = useState<Map<string, CotizacionResumen>>(new Map());
 
   // permite llegar con /inbox?c=<id> desde otras pantallas (ej. Cotizaciones)
   useEffect(() => {
     const c = new URLSearchParams(window.location.search).get("c");
     // eslint-disable-next-line react-hooks/set-state-in-effect -- lectura única del query param al montar
-    if (c) setSelectedId(c);
+    if (c) {
+      setSelectedId(c);
+      setModo("todas");
+    }
   }, []);
 
   const loadConversations = useCallback(async () => {
@@ -41,6 +68,27 @@ export default function InboxPage() {
   const loadAnsweredConversationIds = useCallback(async () => {
     const { data } = await supabase.from("messages").select("conversation_id").eq("sender_type", "ai");
     setAnsweredConversationIds(new Set((data ?? []).map((m) => m.conversation_id as string)));
+  }, [supabase]);
+
+  // El dinero a la vista: folio y monto de la cotización de cada conversación
+  const loadCotizaciones = useCallback(async () => {
+    const [{ data: sols }, { data: cots }] = await Promise.all([
+      supabase.from("quote_requests").select("id, conversation_id").not("conversation_id", "is", null),
+      supabase
+        .from("cotizaciones_emitidas")
+        .select("quote_request_id, folio, total, pdf_url")
+        .order("created_at", { ascending: true }),
+    ]);
+    const porSolicitud = new Map<string, CotizacionResumen>();
+    for (const c of cots ?? []) {
+      if (c.quote_request_id) porSolicitud.set(c.quote_request_id, { folio: c.folio, total: c.total, pdf_url: c.pdf_url });
+    }
+    const mapa = new Map<string, CotizacionResumen>();
+    for (const s of sols ?? []) {
+      const cot = porSolicitud.get(s.id);
+      if (cot && s.conversation_id) mapa.set(s.conversation_id, cot);
+    }
+    setCotPorConversacion(mapa);
   }, [supabase]);
 
   const loadMessages = useCallback(
@@ -60,6 +108,8 @@ export default function InboxPage() {
     loadConversations();
     // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial de la bandeja
     loadAnsweredConversationIds();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial de la bandeja
+    loadCotizaciones();
 
     const channel = supabase
       .channel("inbox-realtime")
@@ -92,12 +142,16 @@ export default function InboxPage() {
 
   const selected = conversations.find((c) => c.id === selectedId) ?? null;
 
+  const esPersonal = (c: ConversationWithContact) => !answeredConversationIds.has(c.id);
+  const urgentesCount = conversations.filter((c) => zonaDe(c) !== "verde").length;
+  const cotizadasCount = conversations.filter((c) => cotPorConversacion.has(c.id)).length;
+  const personalesCount = conversations.filter(esPersonal).length;
+
   const filtered = conversations.filter((c) => {
     if (channelFilter !== "all" && c.channel !== channelFilter) return false;
-    if (statusFilter !== "all" && c.status !== statusFilter) return false;
-    const wasAnswered = answeredConversationIds.has(c.id);
-    if (aiFilter === "answered" && !wasAnswered) return false;
-    if (aiFilter === "personal" && wasAnswered) return false;
+    if (modo === "urgentes" && zonaDe(c) === "verde") return false;
+    if (modo === "cotizadas" && !cotPorConversacion.has(c.id)) return false;
+    if (modo === "personales" && !esPersonal(c)) return false;
     if (search.trim()) {
       const needle = search.trim().toLowerCase();
       const haystack = `${c.contact.display_name ?? ""} ${c.contact.phone ?? ""} ${c.contact.external_id}`.toLowerCase();
@@ -106,13 +160,11 @@ export default function InboxPage() {
     return true;
   });
 
-  const statusCounts = conversations.reduce<Record<string, number>>((acc, c) => {
-    acc[c.status] = (acc[c.status] ?? 0) + 1;
-    return acc;
-  }, {});
-  const porAtenderCount = statusCounts["por_atender"] ?? 0;
-  const answeredCount = conversations.filter((c) => answeredConversationIds.has(c.id)).length;
-  const personalCount = conversations.length - answeredCount;
+  const porZona = {
+    roja: filtered.filter((c) => zonaDe(c) === "roja"),
+    ambar: filtered.filter((c) => zonaDe(c) === "ambar"),
+    verde: filtered.filter((c) => zonaDe(c) === "verde"),
+  };
 
   async function handleSendMessage(content: string) {
     if (!selectedId) return;
@@ -133,79 +185,89 @@ export default function InboxPage() {
     await supabase.from("conversations").update(patch).eq("id", selectedId);
   }
 
+  const chipModo = (m: Modo, etiqueta: string, n?: number) => (
+    <button onClick={() => setModo(m)} className={`chip num ${modo === m ? "chip-on" : ""}`}>
+      {etiqueta}
+      {typeof n === "number" && <span className="ml-1 text-[var(--text-3)]">{n}</span>}
+    </button>
+  );
+
   return (
     <div className="flex h-full">
       <div className="flex w-[380px] shrink-0 flex-col border-r border-[var(--border)] bg-[var(--surface)]">
         <div className="border-b border-[var(--border)] p-3">
-          <div className="mb-2.5 flex items-center gap-2">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar contacto..."
-              className="input"
-            />
-            {porAtenderCount > 0 && (
-              <span className="num shrink-0 rounded-md bg-[#e5484d]/15 px-2 py-1 text-[11px] font-semibold text-[#e5484d]">
-                {porAtenderCount} por atender
-              </span>
-            )}
-          </div>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar contacto..."
+            className="input mb-2.5"
+          />
 
           <div className="mb-1.5 flex flex-wrap gap-1">
+            {chipModo("urgentes", "🔔 Me necesitan", urgentesCount)}
+            {chipModo("todas", "Todas")}
+            {chipModo("cotizadas", "💼 Cotizadas", cotizadasCount)}
+            {chipModo("personales", "👤 Personales", personalesCount)}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1">
             <button onClick={() => setChannelFilter("all")} className={`chip ${channelFilter === "all" ? "chip-on" : ""}`}>
-              Todos
+              Todas las redes
             </button>
             {CHANNELS.map((c) => (
               <button
                 key={c.key}
                 onClick={() => setChannelFilter(c.key)}
-                className={`chip ${channelFilter === c.key ? "chip-on" : ""}`}
+                title={c.label}
+                className={`chip !px-1.5 ${channelFilter === c.key ? "chip-on" : ""}`}
               >
-                <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full align-middle" style={{ backgroundColor: c.color }} />
-                {c.label}
+                <RedSocialIcon channel={c.key} size={16} />
               </button>
             ))}
-          </div>
-
-          <div className="mb-1.5 flex flex-wrap gap-1">
-            <button onClick={() => setStatusFilter("all")} className={`chip ${statusFilter === "all" ? "chip-on" : ""}`}>
-              Todas
-            </button>
-            {STATUS_ORDER.map((status) => (
-              <button
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                className={`chip num ${statusFilter === status ? "chip-on" : ""}`}
-              >
-                {STATUS_CONFIG[status].label} <span className="text-[var(--text-3)]">{statusCounts[status] ?? 0}</span>
-              </button>
-            ))}
-          </div>
-
-          <div className="flex flex-wrap gap-1">
-            <button onClick={() => setAiFilter("all")} className={`chip ${aiFilter === "all" ? "chip-on" : ""}`}>
-              Todas
-            </button>
-            <button onClick={() => setAiFilter("answered")} className={`chip num ${aiFilter === "answered" ? "chip-on" : ""}`}>
-              Negocio · bot contestó <span className="text-[var(--text-3)]">{answeredCount}</span>
-            </button>
-            <button onClick={() => setAiFilter("personal")} className={`chip num ${aiFilter === "personal" ? "chip-on" : ""}`}>
-              Personal <span className="text-[var(--text-3)]">{personalCount}</span>
-            </button>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {filtered.map((c) => (
-            <ConversationListItem
-              key={c.id}
-              conversation={c}
-              contact={c.contact}
-              selected={c.id === selectedId}
-              onClick={() => setSelectedId(c.id)}
-            />
-          ))}
-          {filtered.length === 0 && <p className="p-4 text-[13px] text-[var(--text-3)]">Sin conversaciones.</p>}
+          {ZONAS.map((z) => {
+            const lista = porZona[z.key];
+            if (!lista.length) return null;
+            return (
+              <div key={z.key}>
+                <div className={`sticky top-0 z-10 flex items-center gap-2 border-b border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-[10.5px] font-extrabold tracking-wider ${z.clase}`}>
+                  {z.titulo}
+                  <span className="num rounded-full bg-current px-1.5 text-[9.5px] leading-4">
+                    <span className="text-[var(--surface)]">{lista.length}</span>
+                  </span>
+                </div>
+                {lista.map((c) => (
+                  <ConversationListItem
+                    key={c.id}
+                    conversation={c}
+                    contact={c.contact}
+                    selected={c.id === selectedId}
+                    quienHablo={quienHabloDe(c)}
+                    cotizacion={cotPorConversacion.get(c.id)}
+                    botRespondio={answeredConversationIds.has(c.id)}
+                    onClick={() => setSelectedId(c.id)}
+                  />
+                ))}
+              </div>
+            );
+          })}
+
+          {filtered.length === 0 &&
+            (modo === "urgentes" && !search.trim() && channelFilter === "all" ? (
+              <div className="p-6 text-center">
+                <p className="text-3xl">🎉</p>
+                <p className="mt-2 text-[13.5px] font-semibold">Nadie te necesita ahorita</p>
+                <p className="mt-1 text-xs text-[var(--text-3)]">El bot tiene todo bajo control.</p>
+                <button onClick={() => setModo("todas")} className="btn btn-ghost mt-3 !py-1.5 text-xs">
+                  Ver todas las conversaciones
+                </button>
+              </div>
+            ) : (
+              <p className="p-4 text-[13px] text-[var(--text-3)]">Sin conversaciones con ese filtro.</p>
+            ))}
         </div>
       </div>
 
@@ -216,6 +278,7 @@ export default function InboxPage() {
             conversation={selected}
             contact={selected.contact}
             messages={messages}
+            cotizacion={cotPorConversacion.get(selected.id)}
             onSendMessage={handleSendMessage}
             onUpdateConversation={handleUpdateConversation}
           />

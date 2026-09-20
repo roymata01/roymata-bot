@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChannelBadge } from "@/components/ChannelBadge";
 import { StatusBadge } from "@/components/StatusBadge";
+import type { CotizacionResumen } from "@/components/ConversationListItem";
 import type { Contact, Conversation, Message } from "@/types/database";
 
 function bubbleClass(message: Message) {
@@ -13,20 +14,22 @@ function bubbleClass(message: Message) {
 
 function senderLabel(message: Message) {
   if (message.direction === "in") return null;
-  if (message.sender_type === "ai") return "IA";
-  return "Tú";
+  if (message.sender_type === "ai") return { texto: "🤖 BOT", clase: "text-[#46b380]" };
+  return { texto: "👤 TÚ (ROY)", clase: "text-[#f0b429]" };
 }
 
 export function ChatPanel({
   conversation,
   contact,
   messages,
+  cotizacion,
   onSendMessage,
   onUpdateConversation,
 }: {
   conversation: Conversation;
   contact: Contact;
   messages: Message[];
+  cotizacion?: CotizacionResumen;
   onSendMessage: (content: string) => Promise<void>;
   onUpdateConversation: (patch: Partial<Pick<Conversation, "status" | "ai_enabled">>) => Promise<void>;
 }) {
@@ -67,30 +70,50 @@ export function ChatPanel({
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {isHumanControlled ? (
-            <button onClick={() => onUpdateConversation({ status: "con_ia", ai_enabled: true })} className="btn btn-primary !py-1.5">
-              Reactivar IA
-            </button>
-          ) : (
-            <button onClick={() => onUpdateConversation({ status: "atendiendo", ai_enabled: false })} className="btn btn-ghost !py-1.5">
-              Apagar IA y atender yo
-            </button>
-          )}
-          {conversation.status !== "cerrada" && (
-            <button onClick={() => onUpdateConversation({ status: "cerrada", ai_enabled: false })} className="btn btn-ghost !py-1.5">
-              Cerrar
-            </button>
+        {conversation.status !== "cerrada" && (
+          <button onClick={() => onUpdateConversation({ status: "cerrada", ai_enabled: false })} className="btn btn-ghost !py-1.5">
+            Cerrar
+          </button>
+        )}
+      </div>
+
+      {/* Quién lleva la conversación — con un toque se toma o se devuelve */}
+      {isHumanControlled ? (
+        <div className="flex items-center justify-between gap-3 border-b border-[#f0b429]/30 bg-[#f0b429]/10 px-4 py-2">
+          <p className="text-xs font-semibold text-[#b8860b]">La atiendes TÚ — el bot está en pausa en este chat</p>
+          <button onClick={() => onUpdateConversation({ status: "con_ia", ai_enabled: true })} className="btn btn-primary !py-1 !text-xs">
+            Devolver al bot ✓
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between gap-3 border-b border-[#46b380]/30 bg-[#46b380]/10 px-4 py-2">
+          <p className="text-xs font-semibold text-[#2f8f63]">🤖 El bot atiende esta conversación</p>
+          <button onClick={() => onUpdateConversation({ status: "atendiendo", ai_enabled: false })} className="btn btn-ghost !py-1 !text-xs">
+            Atenderla yo
+          </button>
+        </div>
+      )}
+
+      {/* Su cotización, siempre a la vista */}
+      {cotizacion && (
+        <div className="flex items-center gap-2 border-b border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 text-xs">
+          <span>💼</span>
+          <span className="font-bold">Cotización S{cotizacion.folio}</span>
+          {cotizacion.total ? <span className="num font-semibold text-[var(--accent)]">${Number(cotizacion.total).toLocaleString("es-MX")}</span> : null}
+          {cotizacion.pdf_url && (
+            <a href={cotizacion.pdf_url} target="_blank" rel="noreferrer" className="ml-auto font-semibold text-[var(--accent)] underline">
+              Ver PDF →
+            </a>
           )}
         </div>
-      </div>
+      )}
 
       <div className="flex flex-1 flex-col gap-1.5 overflow-y-auto px-5 py-4">
         {messages.map((message) => (
           <div key={message.id} className={`flex max-w-[65%] flex-col rounded-xl px-3 py-2 ${bubbleClass(message)}`}>
             {senderLabel(message) && (
-              <span className="mb-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-3)]">
-                {senderLabel(message)}
+              <span className={`mb-0.5 text-[10px] font-bold uppercase tracking-wider ${senderLabel(message)!.clase}`}>
+                {senderLabel(message)!.texto}
               </span>
             )}
             <p className="whitespace-pre-wrap text-[13px] leading-relaxed">{message.content}</p>
