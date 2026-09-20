@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchInstagramProfile, fetchMessengerProfile } from "@/lib/meta/fetch-profile";
+import { cacheAvatar, avatarVigente } from "@/lib/meta/cache-avatar";
 import { nombreMessenger } from "@/lib/meta/fetch-messenger-name";
 import type { InboundMessage } from "@/lib/meta/types";
 
@@ -13,22 +14,26 @@ export async function ingestInboundMessage(msg: InboundMessage) {
 
   const { data: existingContact } = await supabase
     .from("contacts")
-    .select("id, display_name")
+    .select("id, display_name, avatar_url")
     .eq("channel", msg.channel)
     .eq("external_id", msg.externalId)
     .maybeSingle();
 
   let displayName = msg.displayName;
   let avatarUrl: string | null = null;
-  if (!existingContact?.display_name) {
+  // Se pide el perfil si falta el nombre O si la foto guardada no sirve
+  // (las URLs del CDN de Meta caducan — solo valen las cacheadas en nuestro
+  // bucket). Así las conversaciones activas van sanando sus fotos solas.
+  const necesitaFoto = !avatarVigente(existingContact?.avatar_url);
+  if (!existingContact?.display_name || necesitaFoto) {
     if (msg.channel === "instagram") {
       const profile = await fetchInstagramProfile(msg.externalId);
-      displayName = displayName ?? profile.displayName;
-      avatarUrl = profile.avatarUrl;
+      displayName = displayName ?? profile.displayName ?? existingContact?.display_name ?? null;
+      if (necesitaFoto) avatarUrl = await cacheAvatar("instagram", msg.externalId, profile.avatarUrl);
     } else if (msg.channel === "messenger") {
       const profile = await fetchMessengerProfile(msg.externalId);
-      displayName = displayName ?? profile.displayName;
-      avatarUrl = profile.avatarUrl;
+      displayName = displayName ?? profile.displayName ?? existingContact?.display_name ?? null;
+      if (necesitaFoto) avatarUrl = await cacheAvatar("messenger", msg.externalId, profile.avatarUrl);
       // la API de perfil está bloqueada sin App Review; la de conversaciones sí
       // da el nombre — respaldo para que la bandeja no muestre solo números
       if (!displayName) displayName = await nombreMessenger(msg.externalId);

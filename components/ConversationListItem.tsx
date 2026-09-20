@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { RedSocialIcon } from "@/components/RedSocialIcon";
 import type { Contact, Conversation } from "@/types/database";
 
@@ -18,15 +21,29 @@ function formatTime(iso: string | null) {
     : date.toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
 }
 
+// Colores estables por contacto para las iniciales (WhatsApp no da fotos
+// por API — al menos que cada quien tenga su color, no todo gris).
+const COLORES_INICIAL = ["#7C3AED", "#1A56DB", "#0E9F6E", "#DB2777", "#B45309", "#DC2626", "#0891B2", "#4F46E5"];
+
 function Avatar({ contact, conversation }: { contact: Contact; conversation: Conversation }) {
+  const [fotoRota, setFotoRota] = useState(false);
   const label = contact.display_name || contact.phone || contact.external_id;
+  const color = COLORES_INICIAL[[...contact.external_id].reduce((a, ch) => a + ch.charCodeAt(0), 0) % COLORES_INICIAL.length];
   return (
     <div className="relative h-10 w-10 shrink-0">
-      {contact.avatar_url ? (
-        // eslint-disable-next-line @next/next/no-img-element -- avatares de CDN de Meta
-        <img src={contact.avatar_url} alt={label} className="h-10 w-10 rounded-full object-cover" />
+      {contact.avatar_url && !fotoRota ? (
+        // eslint-disable-next-line @next/next/no-img-element -- avatares cacheados en nuestro bucket
+        <img
+          src={contact.avatar_url}
+          alt={label}
+          onError={() => setFotoRota(true)}
+          className="h-10 w-10 rounded-full object-cover"
+        />
       ) : (
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--hover)] text-sm font-semibold text-[var(--text-2)]">
+        <div
+          className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white"
+          style={{ backgroundColor: color }}
+        >
           {label.replace("@", "").slice(0, 1).toUpperCase()}
         </div>
       )}
