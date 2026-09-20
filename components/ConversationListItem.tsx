@@ -31,7 +31,7 @@ function Avatar({ contact, conversation }: { contact: Contact; conversation: Con
   const color = COLORES_INICIAL[[...contact.external_id].reduce((a, ch) => a + ch.charCodeAt(0), 0) % COLORES_INICIAL.length];
   return (
     <div className="relative h-10 w-10 shrink-0">
-      {contact.avatar_url && !fotoRota ? (
+      {contact.avatar_url && contact.avatar_url !== "sin-foto" && !fotoRota ? (
         // eslint-disable-next-line @next/next/no-img-element -- avatares cacheados en nuestro bucket
         <img
           src={contact.avatar_url}
