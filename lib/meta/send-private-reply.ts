@@ -1,3 +1,4 @@
+import { igToken } from "@/lib/meta/ig-token";
 // "Private reply": contesta un comentario con un mensaje privado.
 // Meta solo permite UNA private reply por comentario y dentro de los 7 días.
 // La respuesta incluye recipient_id: el ID de mensajería (PSID/IGSID) de la
@@ -14,7 +15,7 @@ export async function sendInstagramPrivateReply(commentId: string, text: string)
   const res = await fetch("https://graph.instagram.com/v21.0/me/messages", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${process.env.IG_PAGE_ACCESS_TOKEN}`,
+      Authorization: `Bearer ${await igToken()}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({

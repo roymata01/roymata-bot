@@ -1,3 +1,5 @@
+import { igToken } from "@/lib/meta/ig-token";
+
 export interface ProfileInfo {
   displayName: string | null;
   avatarUrl: string | null;
@@ -9,7 +11,7 @@ export interface ProfileInfo {
 export async function fetchInstagramProfile(igsid: string): Promise<ProfileInfo> {
   try {
     const res = await fetch(
-      `https://graph.instagram.com/v21.0/${igsid}?fields=username,profile_pic&access_token=${process.env.IG_PAGE_ACCESS_TOKEN}`
+      `https://graph.instagram.com/v21.0/${igsid}?fields=username,profile_pic&access_token=${await igToken()}`
     );
     if (!res.ok) return { displayName: null, avatarUrl: null };
     const data = await res.json();
