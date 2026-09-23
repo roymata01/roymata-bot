@@ -14,9 +14,35 @@ function personalizeInvite(text: string, name: string | null): string {
   return text.replace(/\s*\{nombre\}/g, "");
 }
 
+// ¿Está en la lista de gente que Roy sigue/conoce? A ellos el bot jamás les
+// abre plática (Meta no deja preguntar "¿yo sigo a esta persona?", así que
+// la lista se mantiene a mano en comment_dm_excluidos). Si la tabla no
+// existe aún, falla abierto: no bloquea el DM.
+export async function estaExcluido(
+  supabase: ReturnType<typeof createAdminClient>,
+  channel: string,
+  username: string | null | undefined
+): Promise<boolean> {
+  if (!username) return false;
+  try {
+    const { data } = await supabase
+      .from("comment_dm_excluidos")
+      .select("id")
+      .eq("username", username.toLowerCase().replace(/^@/, ""))
+      .in("channel", [channel, "ambos"])
+      .limit(1);
+    return !!data?.length;
+  } catch {
+    return false;
+  }
+}
+
 // Espejo de handle-instagram-comment pero para comentarios en posts de la
 // Página de Facebook: un solo DM por persona, nunca a la propia Página,
 // respeta el apagado de emergencia y el switch de Personalización.
+// ESTRATEGIA 2026-09-23 (pedido de Roy): el DM es un ABREPLÁTICA para
+// TODO comentario (ya sin filtro de relevancia) — la venta del Instituto
+// la hace la IA dentro de la conversación, no este primer mensaje.
 export async function handleFacebookComment(comment: FacebookComment) {
   if (comment.userId === process.env.FB_PAGE_ID) return; // respuestas de la propia Página
 
@@ -26,9 +52,8 @@ export async function handleFacebookComment(comment: FacebookComment) {
   const config = settings as { comment_dm_enabled?: boolean; comment_dm_text?: string; is_paused?: boolean } | null;
   if (!config?.comment_dm_enabled || !config.comment_dm_text || config.is_paused) return;
 
-  // El DM SOLO se manda si el comentario tiene que ver con los cursos (mismo
-  // filtro que Instagram — en posts personales nadie recibe DM de venta).
-  if (!(await comentarioRelacionadoConClase(comment.text))) return;
+  // Gente que Roy sigue/conoce: sin DM
+  if (await estaExcluido(supabase, "messenger", comment.userName)) return;
 
   const { data: invite, error: insertError } = await supabase
     .from("comment_invites")

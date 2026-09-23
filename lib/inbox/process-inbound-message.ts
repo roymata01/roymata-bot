@@ -11,6 +11,7 @@ import { detectarFamiliarHyrox } from "@/lib/hyrox/detectar-familiar";
 import { atenderFamiliarHyrox } from "@/lib/hyrox/atender-familiar";
 import { classifyMessage } from "@/lib/ai/classify-message";
 import { maybeCaptureQuoteRequest } from "@/lib/ai/extract-quote";
+import { maybeCaptureListaEspera } from "@/lib/ai/capture-lista-espera";
 import { escalateConversation } from "@/lib/ai/escalate-conversation";
 import { generateAiReply } from "@/lib/ai/generate-reply";
 import { sendForChannel } from "@/lib/meta/send-message";
@@ -124,6 +125,10 @@ export async function processInboundMessage(msg: InboundMessage) {
   // cliente en quote_requests para el apartado "Cotizaciones" del panel.
   // Nunca lanza — un fallo aquí no frena la respuesta.
   await maybeCaptureQuoteRequest(conversation.id, contact.id, msg.content);
+
+  // Lista de espera Generación 2 del Instituto (abre en diciembre): captura
+  // a quien quiere inscribirse para sí mismo. Igual: nunca lanza.
+  await maybeCaptureListaEspera(conversation.id, contact.id, msg.channel, msg.content);
 
   const supabaseCheck = createAdminClient();
   const { data: settings } = await supabaseCheck

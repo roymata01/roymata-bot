@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { comentarioRelacionadoConClase } from "@/lib/ai/comment-relevance";
+import { estaExcluido } from "@/lib/inbox/handle-facebook-comment";
 import { nombreDesdeUsername } from "@/lib/ai/name-from-username";
 import { conRef } from "@/lib/meta/link-ref";
 import { replyToInstagramComment, respuestaPublicaAleatoria } from "@/lib/meta/reply-to-comment";
@@ -30,11 +31,12 @@ export async function handleInstagramComment(comment: InstagramComment) {
   // el apagado de emergencia (is_paused) también frena las invitaciones
   if (!config?.comment_dm_enabled || !config.comment_dm_text || config.is_paused) return;
 
-  // El DM SOLO se manda si el comentario tiene que ver con los cursos.
-  // (2026-08-02: en un post personal de Roy se invitó a 226 personas que solo
-  // lo felicitaban — este filtro existía pero solo aplicaba a la respuesta
-  // pública. Ahora es la puerta de TODO.)
-  if (!(await comentarioRelacionadoConClase(comment.text))) return;
+  // ESTRATEGIA 2026-09-23 (pedido de Roy): el DM es un ABREPLÁTICA para TODO
+  // comentario — ya no se filtra por relevancia; la venta del Instituto la
+  // hace la IA dentro de la conversación. (El filtro de relevancia sigue
+  // vivo solo para la respuesta pública, más abajo.) La protección contra
+  // escribirle a gente que Roy sigue/conoce es la lista comment_dm_excluidos.
+  if (await estaExcluido(supabase, "instagram", comment.username)) return;
 
   // Dedupe por persona: el índice único de comment_invites(channel, ig_user_id) es la
   // fuente de verdad — si ya se le escribió alguna vez, el insert choca y se descarta.
