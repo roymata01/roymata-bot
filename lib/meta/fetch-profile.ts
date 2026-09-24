@@ -21,6 +21,24 @@ export async function fetchInstagramProfile(igsid: string): Promise<ProfileInfo>
   }
 }
 
+// ¿La cuenta de Roy SIGUE a este usuario de Instagram? (regla 2026-09-24:
+// a la gente que Roy sigue —colegas, amigos— el bot NO le abre plática por
+// comentario). La API expone is_business_follow_user en el perfil del
+// usuario. Si el campo no viene o la llamada falla, se asume que NO lo
+// sigue (fail-open: mejor un DM de más a un fan que quedarse callado).
+export async function roySigueAlUsuario(igUserId: string): Promise<boolean> {
+  try {
+    const res = await fetch(
+      `https://graph.instagram.com/v21.0/${igUserId}?fields=is_business_follow_user&access_token=${await igToken()}`
+    );
+    if (!res.ok) return false;
+    const data = await res.json();
+    return data.is_business_follow_user === true;
+  } catch {
+    return false;
+  }
+}
+
 export async function fetchMessengerProfile(psid: string): Promise<ProfileInfo> {
   try {
     const res = await fetch(

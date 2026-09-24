@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { comentarioRelacionadoConClase } from "@/lib/ai/comment-relevance";
 import { estaExcluido } from "@/lib/inbox/handle-facebook-comment";
+import { roySigueAlUsuario } from "@/lib/meta/fetch-profile";
 import { nombreDesdeUsername } from "@/lib/ai/name-from-username";
 import { conRef } from "@/lib/meta/link-ref";
 import { replyToInstagramComment, respuestaPublicaAleatoria } from "@/lib/meta/reply-to-comment";
@@ -34,8 +35,11 @@ export async function handleInstagramComment(comment: InstagramComment) {
   // ESTRATEGIA 2026-09-23 (pedido de Roy): el DM es un ABREPLÁTICA para TODO
   // comentario — ya no se filtra por relevancia; la venta del Instituto la
   // hace la IA dentro de la conversación. (El filtro de relevancia sigue
-  // vivo solo para la respuesta pública, más abajo.) La protección contra
-  // escribirle a gente que Roy sigue/conoce es la lista comment_dm_excluidos.
+  // vivo solo para la respuesta pública, más abajo.)
+  // Regla 2026-09-24: si ROY SIGUE a la persona (colegas, amigos), el bot
+  // no le escribe — se consulta directo a la API de Meta. La tabla
+  // comment_dm_excluidos queda como override manual de emergencia.
+  if (await roySigueAlUsuario(comment.userId)) return;
   if (await estaExcluido(supabase, "instagram", comment.username)) return;
 
   // Dedupe por persona: el índice único de comment_invites(channel, ig_user_id) es la
