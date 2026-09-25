@@ -119,7 +119,19 @@ export async function processInboundMessage(msg: InboundMessage) {
   // Roy conteste él. (La excepción "Messenger contesta todo" se quitó el
   // 2026-08-13 a pedido de Roy: el bot le estaba contestando conversaciones
   // personales.)
-  if (category === "personal") return;
+  // EXCEPCIÓN 2026-09-25: si la plática la ABRIÓ EL BOT con el DM por
+  // comentario, no es un chat personal de Roy — es un lead a mitad del
+  // abreplática ("me tocó vivir un accidente…" suena personal pero ES la
+  // plática que el bot mismo inició). Reporte de Roy: "ya te contestan en
+  // IG y no les estás siguiendo la plática".
+  if (category === "personal") {
+    const { data: abiertaPorBot } = await createAdminClient()
+      .from("comment_invites")
+      .select("id")
+      .eq("conversation_id", conversation.id)
+      .limit(1);
+    if (!abiertaPorBot?.length) return;
+  }
 
   // Cotizaciones grupales (empresa/escuela): detecta y junta los datos del
   // cliente en quote_requests para el apartado "Cotizaciones" del panel.
