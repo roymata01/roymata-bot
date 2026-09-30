@@ -12,6 +12,7 @@ import { atenderFamiliarHyrox } from "@/lib/hyrox/atender-familiar";
 import { classifyMessage } from "@/lib/ai/classify-message";
 import { maybeCaptureQuoteRequest } from "@/lib/ai/extract-quote";
 import { maybeCaptureListaEspera } from "@/lib/ai/capture-lista-espera";
+import { maybeAvisarCierreARoy } from "@/lib/ai/avisar-cierre";
 import { escalateConversation } from "@/lib/ai/escalate-conversation";
 import { generateAiReply } from "@/lib/ai/generate-reply";
 import { sendForChannel } from "@/lib/meta/send-message";
@@ -141,6 +142,11 @@ export async function processInboundMessage(msg: InboundMessage) {
   // Lista de espera Generación 2 del Instituto (abre en diciembre): captura
   // a quien quiere inscribirse para sí mismo. Igual: nunca lanza.
   await maybeCaptureListaEspera(conversation.id, contact.id, msg.channel, msg.content);
+
+  // Si quiere CERRAR (confirmar, agendar, pagar, que Roy le llame), alerta al
+  // WhatsApp personal de Roy — la IA no puede prometer "Roy te contacta" sin
+  // que a Roy le suene el cel. Corre aunque la IA esté pausada; nunca lanza.
+  await maybeAvisarCierreARoy(conversation.id, contact.id, msg.channel, msg.content);
 
   const supabaseCheck = createAdminClient();
   const { data: settings } = await supabaseCheck

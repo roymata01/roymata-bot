@@ -25,11 +25,36 @@ export async function avisarRespuestaCotizacionWA(externalId: string, texto: str
     const supabase = createAdminClient();
 
     // ¿Este teléfono pidió cotización? (los teléfonos llegan con +52, espacios…)
-    const { data: sols } = await supabase
+    let { data: sols } = await supabase
       .from("quote_requests")
       .select("id, nombre, organizacion, telefono")
       .not("telefono", "is", null)
       .ilike("telefono", `%${tel.slice(-8)}%`);
+
+    // Si escribe desde OTRO número distinto al del formulario (caso Marisol,
+    // 30-sep: pidió con un +52 y escribió desde un +1), el teléfono no matchea
+    // pero su conversación de WhatsApp sí quedó ligada a la solicitud (botón
+    // "solicitud #..." del formulario, o la entrega del PDF por este chat).
+    // Se busca también por ese amarre para no perder la alerta.
+    if (!sols?.length) {
+      const { data: contacto } = await supabase
+        .from("contacts")
+        .select("id")
+        .eq("channel", "whatsapp")
+        .eq("external_id", digitos)
+        .maybeSingle();
+      if (!contacto) return;
+      const { data: convs } = await supabase
+        .from("conversations")
+        .select("id")
+        .eq("contact_id", contacto.id);
+      if (!convs?.length) return;
+      const { data: ligadas } = await supabase
+        .from("quote_requests")
+        .select("id, nombre, organizacion, telefono")
+        .in("conversation_id", convs.map((c) => c.id));
+      sols = ligadas;
+    }
     if (!sols?.length) return;
 
     // Su cotización enviada más reciente dentro de la ventana
