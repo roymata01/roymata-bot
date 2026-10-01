@@ -553,6 +553,30 @@ const SUPA_URL = 'https://lgztrnrfzfczrvsscbcb.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxnenRybnJmemZjenJ2c3NjYmNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5NDE4NzQsImV4cCI6MjA5ODUxNzg3NH0.55v0fEe9pSsklHNJ7Z_0Qjxc1TXbczEcw26EyjpwGY4';
 const db = supabase.createClient(SUPA_URL, SUPA_KEY);
 
+// RLS (30-sep-2026): la base ya no acepta la llave pública sin sesión.
+// Esta página vive en un iframe del panel (mismo dominio), así que adopta la
+// sesión iniciada de Roy desde las cookies del panel (formato @supabase/ssr,
+// a veces partida en .0/.1) antes de hablar con la base.
+async function adoptarSesionPanel(){
+  try{
+    const pref='sb-lgztrnrfzfczrvsscbcb-auth-token';
+    const pares=document.cookie.split(/;\s*/).map(c=>{const i=c.indexOf('=');return [c.slice(0,i),c.slice(i+1)];});
+    const trozos=pares.filter(([k])=>k===pref||k.startsWith(pref+'.'))
+      .sort((a,b)=>(+(a[0].split('.').pop())||0)-(+(b[0].split('.').pop())||0));
+    if(!trozos.length) return;
+    let raw=decodeURIComponent(trozos.map(([,v])=>v).join(''));
+    if(raw.startsWith('base64-')){
+      let b=raw.slice(7).replace(/-/g,'+').replace(/_/g,'/');
+      while(b.length%4) b+='=';
+      raw=atob(b);
+    }
+    const ses=JSON.parse(raw);
+    if(ses&&ses.access_token&&ses.refresh_token){
+      await db.auth.setSession({access_token:ses.access_token,refresh_token:ses.refresh_token});
+    }
+  }catch(e){ console.error('No se pudo adoptar la sesión del panel:',e); }
+}
+
 // ══════════════════════════════════
 //  CATEGORÍAS BASE
 // ══════════════════════════════════
@@ -1852,7 +1876,7 @@ async function procesarVoz(texto){
 }
 
 setType('income');
-loadAll();
+adoptarSesionPanel().then(loadAll);
 </script>
 </body>
 </html>
