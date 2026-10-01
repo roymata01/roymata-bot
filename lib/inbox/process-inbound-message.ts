@@ -172,7 +172,7 @@ export async function processInboundMessage(msg: InboundMessage) {
       .select("id", { count: "exact", head: true })
       .eq("conversation_id", conversation.id)
       .eq("direction", "in");
-    if (count && count % 5 === 0) {
+    if (count && count % 2 === 0) {
       try {
         const { enviarAudioRespuesta } = await import("@/lib/voz/enviar-audio-respuesta");
         const metaId = await enviarAudioRespuesta(msg.channel, msg.externalId, replyText);
