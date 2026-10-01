@@ -6,6 +6,11 @@
 <title>Finanzas Personales</title>
 
 <meta name="theme-color" content="#0f172a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Finanzas">
 
 
 
@@ -191,6 +196,41 @@ tr:hover td{background:#fafafa}
 .fab-mic:hover{transform:scale(1.08)}
 .fab-mic.rec{background:#dc2626;animation:micpulse 1s infinite}
 @keyframes micpulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.5)}50%{box-shadow:0 0 0 12px rgba(220,38,38,0)}}
+.fab-cam{position:fixed;bottom:160px;right:24px;z-index:90;background:#0f172a;color:#fff;border:none;width:56px;height:56px;border-radius:50%;font-size:1.4rem;cursor:pointer;box-shadow:0 4px 16px rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;transition:transform .15s}
+.fab-cam:hover{transform:scale(1.08)}
+
+/* ── CÁMARA DE TICKETS ── */
+#camOverlay{display:none;position:fixed;inset:0;z-index:300;background:#0f172a;color:#fff;padding:env(safe-area-inset-top) 20px env(safe-area-inset-bottom)}
+#camOverlay.open{display:flex;align-items:center;justify-content:center}
+.cam-vista{display:flex;flex-direction:column;align-items:center;gap:22px;width:100%;max-width:420px}
+.cam-big{background:rgba(255,255,255,.06);border:2px dashed rgba(255,255,255,.3);border-radius:24px;color:#fff;width:100%;padding:64px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer;transition:background .15s}
+.cam-big:active{background:rgba(255,255,255,.14)}
+.cam-ico{font-size:3.4rem;line-height:1}
+.cam-tit{font-size:1.25rem;font-weight:800}
+.cam-sub{font-size:.9rem;color:rgba(255,255,255,.65)}
+.cam-link{background:none;border:none;color:rgba(255,255,255,.75);font-size:.95rem;cursor:pointer;padding:10px;text-decoration:underline;text-underline-offset:3px}
+.cam-busy{display:flex;flex-direction:column;align-items:center;gap:12px;animation:camPulse 1.2s infinite}
+@keyframes camPulse{0%,100%{opacity:1}50%{opacity:.45}}
+.cam-card{background:#fff;color:#1e293b;border-radius:18px;padding:22px 24px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.35)}
+.cam-card .cc-monto{font-size:2.1rem;font-weight:800;letter-spacing:-.5px}
+.cam-card .cc-monto.ingreso{color:#16a34a}
+.cam-card .cc-linea{margin-top:6px;font-size:.95rem;color:#475569}
+.cam-card .cc-chip{display:inline-block;margin-top:10px;background:#f1f5f9;border-radius:999px;padding:4px 12px;font-size:.82rem;font-weight:700;color:#334155}
+.cam-acciones{display:flex;flex-direction:column;gap:10px;width:100%}
+.cam-btn{border:none;border-radius:14px;padding:14px;font-size:1rem;font-weight:800;cursor:pointer}
+.cam-btn-pri{background:#16a34a;color:#fff}
+.cam-btn-sec{background:rgba(255,255,255,.12);color:#fff}
+
+/* ── LOGIN ── */
+#loginOverlay{display:none;position:fixed;inset:0;z-index:400;background:#0f172a;align-items:center;justify-content:center;padding:24px}
+#loginOverlay.open{display:flex}
+.login-caja{background:#fff;border-radius:18px;padding:28px 24px;width:100%;max-width:360px;display:flex;flex-direction:column;gap:12px}
+.login-caja h2{font-size:1.3rem;color:#0f172a}
+.login-caja p{font-size:.88rem;color:#64748b;margin-bottom:4px}
+.login-caja input{border:1.5px solid #e2e8f0;border-radius:12px;padding:12px 14px;font-size:1rem}
+.login-caja input:focus{outline:none;border-color:#1a56db}
+.login-caja button{background:#0f172a;color:#fff;border:none;border-radius:12px;padding:13px;font-size:1rem;font-weight:800;cursor:pointer}
+.login-caja button:disabled{opacity:.6}
 
 /* ── EXPORT ── */
 .export-bar{text-align:center;padding:8px 0 36px}
@@ -414,8 +454,44 @@ tr:hover td{background:#fafafa}
 </div>
 
 <!-- FAB -->
+<button class="fab-cam" onclick="abrirCamara()" title="Registrar ticket con foto" aria-label="Registrar ticket con foto">📸</button>
 <button class="fab-mic" id="micBtn" onclick="toggleMic()" title="Agregar por voz" aria-label="Agregar por voz">🎤</button>
 <button class="fab" onclick="openForm()" title="Agregar registro">＋</button>
+
+<!-- ══ CÁMARA DE TICKETS (pantalla de arranque en el teléfono) ══ -->
+<div id="camOverlay">
+  <div class="cam-vista" id="camHome">
+    <button class="cam-big" onclick="document.getElementById('ticketCam').click()">
+      <span class="cam-ico">📸</span>
+      <span class="cam-tit">Registrar ticket</span>
+      <span class="cam-sub">Toca para abrir la cámara</span>
+    </button>
+    <button class="cam-link" onclick="cerrarCamara()">Ver mis finanzas →</button>
+  </div>
+  <div class="cam-vista" id="camBusy" style="display:none">
+    <div class="cam-busy"><span class="cam-ico">🧾</span><span class="cam-tit">Leyendo tu ticket…</span></div>
+  </div>
+  <div class="cam-vista" id="camResult" style="display:none">
+    <div class="cam-card" id="camCardBody"></div>
+    <div class="cam-acciones">
+      <button class="cam-btn cam-btn-sec" onclick="corregirTicket()">✏️ Corregir</button>
+      <button class="cam-btn cam-btn-pri" onclick="otroTicket()">📸 Otro ticket</button>
+      <button class="cam-link" onclick="cerrarCamara()">Listo, ver mis finanzas →</button>
+    </div>
+  </div>
+  <input type="file" id="ticketCam" accept="image/*" capture="environment" style="display:none" onchange="ticketElegido(this)">
+</div>
+
+<!-- ══ LOGIN (solo cuando la app corre fuera del panel, p. ej. como app en el teléfono) ══ -->
+<div id="loginOverlay">
+  <div class="login-caja">
+    <h2>Finanzas</h2>
+    <p>Inicia sesión una sola vez para sincronizar con tu base.</p>
+    <input type="email" id="loginEmail" value="roymataparamedic@gmail.com" autocomplete="username" placeholder="Correo">
+    <input type="password" id="loginPass" autocomplete="current-password" placeholder="Contraseña" onkeydown="if(event.key==='Enter')doLogin()">
+    <button id="loginBtn" onclick="doLogin()">Entrar</button>
+  </div>
+</div>
 
 <!-- ══ MODAL: FORM ══ -->
 <div class="overlay" id="formOverlay">
@@ -1875,8 +1951,165 @@ async function procesarVoz(texto){
   }catch(e){ setLoad(false); showToast('⚠️ Error al procesar la voz'); }
 }
 
+// ══════════════════════════════════
+//  SESIÓN (iframe del panel O app independiente)
+// ══════════════════════════════════
+async function ensureSession(){
+  let {data:{session}}=await db.auth.getSession();
+  if(!session){ await adoptarSesionPanel(); ({data:{session}}=await db.auth.getSession()); }
+  if(!session){ document.getElementById('loginOverlay').classList.add('open'); return false; }
+  return true;
+}
+async function doLogin(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const pass=document.getElementById('loginPass').value;
+  if(!email||!pass){ showToast('⚠️ Falta tu correo o contraseña'); return; }
+  const btn=document.getElementById('loginBtn');
+  btn.disabled=true; btn.textContent='Entrando…';
+  const {error}=await db.auth.signInWithPassword({email,password:pass});
+  btn.disabled=false; btn.textContent='Entrar';
+  if(error){ showToast('⚠️ '+(/invalid/i.test(error.message)?'Correo o contraseña incorrectos':error.message)); return; }
+  document.getElementById('loginOverlay').classList.remove('open');
+  arrancar();
+}
+async function tokenSesion(){
+  const {data:{session}}=await db.auth.getSession();
+  return session?session.access_token:null;
+}
+
+// ══════════════════════════════════
+//  CÁMARA DE TICKETS
+// ══════════════════════════════════
+let ultimoTicket=null;
+function camVista(v){ for(const id of ['camHome','camBusy','camResult']) document.getElementById(id).style.display=(id===v?'flex':'none'); }
+function abrirCamara(){ camVista('camHome'); document.getElementById('camOverlay').classList.add('open'); }
+function cerrarCamara(){ document.getElementById('camOverlay').classList.remove('open'); ultimoTicket=null; }
+function otroTicket(){ camVista('camHome'); ultimoTicket=null; document.getElementById('ticketCam').click(); }
+
+async function comprimirTicket(file){
+  try{
+    const bmp=await createImageBitmap(file);
+    const max=1600, k=Math.min(1,max/Math.max(bmp.width,bmp.height));
+    const c=document.createElement('canvas');
+    c.width=Math.round(bmp.width*k); c.height=Math.round(bmp.height*k);
+    c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
+    return c.toDataURL('image/jpeg',.82);
+  }catch(e){
+    return await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=rej;fr.readAsDataURL(file);});
+  }
+}
+
+// Tipo de cambio para tickets en dólares (cacheado 24 h; si falla, 18.1)
+async function tipoCambioUSD(){
+  const cache=lsG('fx_usd',null);
+  if(cache&&Date.now()-cache.t<864e5) return cache.v;
+  try{
+    const r=await fetch('https://open.er-api.com/v6/latest/USD').then(x=>x.json());
+    const v=Number(r&&r.rates&&r.rates.MXN);
+    if(v>0){ lsS('fx_usd',{v,t:Date.now()}); return v; }
+  }catch(e){}
+  return cache?cache.v:18.1;
+}
+
+function catValida(cat,type){
+  const lista=type==='income'?allIncCats():allExpCats();
+  if(lista.includes(cat)) return cat;
+  return type==='income'?'Otros':'Varios';
+}
+
+// Guardado directo (mismo pipeline que el formulario, sin UI)
+async function guardarRegistroDirecto(record){
+  records.unshift(record);
+  records.sort((a,b)=>b.date.localeCompare(a.date));
+  saveLocal();
+  if(navigator.onLine){
+    try{ const{error}=await db.from('registros').insert(record); if(error) throw error; }
+    catch(e){ const pend=lsG(LS.pend,[]); pend.push(record); lsS(LS.pend,pend); }
+  }else{
+    const pend=lsG(LS.pend,[]); pend.push(record); lsS(LS.pend,pend);
+  }
+}
+
+async function ticketElegido(input){
+  const file=input.files&&input.files[0];
+  input.value='';
+  if(!file) return;
+  camVista('camBusy');
+  try{
+    const imagen=await comprimirTicket(file);
+    const tk=await tokenSesion();
+    if(!tk){ cerrarCamara(); document.getElementById('loginOverlay').classList.add('open'); return; }
+    const res=await fetch('/api/finanzas/parse-ticket',{
+      method:'POST',
+      headers:{'Content-Type':'application/json',Authorization:'Bearer '+tk},
+      body:JSON.stringify({image:imagen,expCats:allExpCats(),incCats:allIncCats()})
+    });
+    const p=await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(p.error||'No pude leer el ticket');
+    const type=p.type==='income'?'income':'expense';
+    if(!p.amount||Number(p.amount)<=0){
+      // Sin total claro: formulario prefilled con lo que sí se leyó, sin guardar nada
+      showToast('⚠️ No distinguí el total — revísalo tú');
+      cerrarCamara(); openForm(); setType(type);
+      if(p.date) document.getElementById('fDate').value=p.date;
+      document.getElementById('fConcept').value=p.concept||'';
+      document.getElementById('fEst').value=p.establishment||'';
+      document.getElementById('fCat').value=catValida(p.category,type);
+      return;
+    }
+    let amount=Math.round(Number(p.amount)*100)/100;
+    let concept=p.concept||p.establishment||'Ticket';
+    if(p.usd){ const fx=await tipoCambioUSD(); amount=Math.round(amount*fx*100)/100; concept+=` (${p.amount} USD)`; }
+    const record={
+      id:uid(), type, date:p.date||new Date().toISOString().slice(0,10),
+      amount, category:catValida(p.category,type), concept,
+      establishment:p.establishment||null, quantity:1
+    };
+    await guardarRegistroDirecto(record);
+    ultimoTicket=record;
+    renderAll();
+    const f=new Date(record.date+'T12:00:00');
+    document.getElementById('camCardBody').innerHTML=
+      `<div class="cc-monto${type==='income'?' ingreso':''}">${type==='income'?'+':''}$${record.amount.toLocaleString('es-MX',{minimumFractionDigits:2})}</div>`+
+      `<div class="cc-linea">${esc(record.concept)}${record.establishment?' · '+esc(record.establishment):''}</div>`+
+      `<div class="cc-linea">${f.getDate()} de ${MONTHS_ES[f.getMonth()].toLowerCase()}</div>`+
+      `<span class="cc-chip">${esc(record.category)}</span> <span class="cc-chip">✅ Guardado</span>`;
+    camVista('camResult');
+  }catch(e){
+    console.error('ticket:',e);
+    showToast('⚠️ '+(e.message||'No pude leer el ticket'));
+    camVista('camHome');
+  }
+}
+
+// "Corregir": borra el auto-guardado y abre el formulario normal prellenado
+async function corregirTicket(){
+  const r=ultimoTicket;
+  if(!r) return;
+  records=records.filter(x=>x.id!==r.id); saveLocal(); renderAll();
+  lsS(LS.pend, lsG(LS.pend,[]).filter(x=>x.id!==r.id));
+  try{ await db.from('registros').delete().eq('id',r.id); }catch(e){}
+  cerrarCamara();
+  openForm(); setType(r.type);
+  document.getElementById('fDate').value=r.date;
+  document.getElementById('fAmount').value=r.amount;
+  document.getElementById('fConcept').value=r.concept;
+  document.getElementById('fEst').value=r.establishment||'';
+  document.getElementById('fCat').value=r.category;
+  ultimoTicket=null;
+}
+
+// ══════════════════════════════════
+//  ARRANQUE
+// ══════════════════════════════════
+const esAppTelefono=()=>window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
+function arrancar(){
+  // En el teléfono (app instalada): cámara directo. En el panel: dashboard.
+  if(esAppTelefono()) abrirCamara();
+  loadAll();
+}
 setType('income');
-adoptarSesionPanel().then(loadAll);
+ensureSession().then(ok=>{ if(ok) arrancar(); });
 </script>
 </body>
 </html>
