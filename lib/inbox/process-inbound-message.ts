@@ -160,6 +160,35 @@ export async function processInboundMessage(msg: InboundMessage) {
   if (!replyText || mensajes.length === 0) return;
 
   const supabase = createAdminClient();
+
+  // MODO PRUEBA DE AUDIOS (Roy, 1-oct-2026): solo contactos con la etiqueta
+  // "audio_prueba" (las cuentas del propio Roy). Cada 5.º mensaje suyo, la
+  // respuesta sale como nota de voz con su clon en vez de texto — para
+  // evaluar calidad antes de activar audios con clientes reales. Si el
+  // audio falla o la respuesta trae un link, cae al texto normal.
+  if ((contact.tags ?? []).includes("audio_prueba") && !/https?:\/\//.test(replyText)) {
+    const { count } = await supabase
+      .from("messages")
+      .select("id", { count: "exact", head: true })
+      .eq("conversation_id", conversation.id)
+      .eq("direction", "in");
+    if (count && count % 5 === 0) {
+      try {
+        const { enviarAudioRespuesta } = await import("@/lib/voz/enviar-audio-respuesta");
+        const metaId = await enviarAudioRespuesta(msg.channel, msg.externalId, replyText);
+        await supabase
+          .from("messages")
+          .update({ status: "sent", meta_message_id: metaId, content: `🎙️ (audio) ${replyText}` })
+          .eq("id", mensajes[0].messageId);
+        if (mensajes.length > 1) {
+          await supabase.from("messages").delete().in("id", mensajes.slice(1).map((m) => m.messageId));
+        }
+        return;
+      } catch (e) {
+        console.error("Audio de prueba falló; va en texto:", e);
+      }
+    }
+  }
   for (const [i, mensaje] of mensajes.entries()) {
     try {
       const metaMessageId = await sendForChannel(msg.channel, msg.externalId, mensaje.text);
