@@ -133,12 +133,14 @@ export async function processInboundMessage(msg: InboundMessage) {
   // plática que el bot mismo inició). Reporte de Roy: "ya te contestan en
   // IG y no les estás siguiendo la plática".
   if (category === "personal") {
-    const { data: abiertaPorBot } = await createAdminClient()
-      .from("comment_invites")
-      .select("id")
-      .eq("conversation_id", conversation.id)
-      .limit(1);
-    if (!abiertaPorBot?.length) return;
+    const supabaseExcepcion = createAdminClient();
+    const [{ data: abiertaPorBot }, { data: enLista }] = await Promise.all([
+      supabaseExcepcion.from("comment_invites").select("id").eq("conversation_id", conversation.id).limit(1),
+      // Quien mandó QUIERO (CTA del video) está a mitad del embudo de la
+      // Gen 2 — "sería mi primera vez" suena personal pero ES la plática.
+      supabaseExcepcion.from("lista_espera_gen2").select("id").eq("conversation_id", conversation.id).limit(1),
+    ]);
+    if (!abiertaPorBot?.length && !enLista?.length) return;
   }
 
   // Cotizaciones grupales (empresa/escuela): detecta y junta los datos del

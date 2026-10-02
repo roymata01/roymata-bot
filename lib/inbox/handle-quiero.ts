@@ -54,13 +54,17 @@ export async function handleQuiero(
     );
   }
 
+  // Abridor HUMANO (pedido de Roy 3-oct): nada de "quedas registrado" de
+  // máquina. Se reconoce su interés y se abre plática; la IA normal sigue
+  // la conversación (resuelve dudas y pide correo o WhatsApp ya en
+  // confianza — regla de contacto obligatorio vive en la KB).
   const burbujas = yaCompleto
     ? [
-        "Ya tienes tu lugar apartado en la segunda generación 🙌 nos vemos el sábado 19 de diciembre a las 6pm en la clase gratis de presentación, te llega el recordatorio",
+        "Hola de nuevo 🙌 tu lugar ya lo tienes apartado, nos vemos el sábado 19 de diciembre a las 6pm en la clase de presentación",
       ]
     : [
-        "Listo! Quedas en la lista de espera de la segunda generación del Instituto VITA 🙌",
-        "Para apartarte bien tu lugar dejame tu correo o tu WhatsApp, y te mando el acceso a la clase gratis de presentación, es el sábado 19 de diciembre a las 6pm",
+        "Holaa, vi tu mensaje 🙌 que bueno que te interesa la segunda generación del Instituto VITA",
+        "Cuentame, ya habias tomado algun curso conmigo o seria tu primera vez",
       ];
 
   for (const [i, textoBurbuja] of burbujas.entries()) {
