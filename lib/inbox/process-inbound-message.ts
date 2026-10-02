@@ -4,6 +4,7 @@ import { sendInviteFollowUpIfFirstReply } from "@/lib/inbox/send-invite-follow-u
 import { sendKeywordReplyIfMatch } from "@/lib/inbox/handle-keyword-reply";
 import { handleCampaignReply } from "@/lib/inbox/handle-campaign-reply";
 import { handleCotizacionWhatsApp } from "@/lib/inbox/handle-cotizacion-whatsapp";
+import { handleQuiero } from "@/lib/inbox/handle-quiero";
 import { checkEscalation } from "@/lib/ai/check-escalation";
 import { royFollowsInstagramUser } from "@/lib/meta/check-roy-follows";
 import { modoEventoHyroxActivo } from "@/lib/hyrox/config";
@@ -90,6 +91,12 @@ export async function processInboundMessage(msg: InboundMessage) {
     conversation.id, contact.id, msg.channel, msg.externalId, msg.content
   );
   if (cotizacionEnviada) return;
+
+  // "QUIERO" (CTA del video del Instituto VITA) -> respuesta determinista:
+  // aparta lugar en lista_espera_gen2 y pide contacto OBLIGATORIO; los
+  // datos que lleguen después los completa capture-lista-espera.
+  const quiso = await handleQuiero(conversation.id, contact.id, msg.channel, msg.externalId, msg.content);
+  if (quiso) return;
 
   // Palabra clave ("responde CURSO a esta historia") -> link de registro,
   // determinista. Va antes del seguimiento: si responden "curso" a la
