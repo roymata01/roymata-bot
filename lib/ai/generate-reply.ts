@@ -24,21 +24,27 @@ export async function generateAiReply(conversationId: string, channel: Channel, 
 
   const knowledgeBasePrompt = await buildSystemPrompt();
   const contactName = contact?.display_name || contact?.phone || null;
-  // toque humano (idea de Roy): ~1 de cada 5 respuestas trae una falta de dedo
-  // que se corrige en el siguiente mensaje — controlado por código para que la
-  // frecuencia sea real y no quede al criterio del modelo
-  const conTypo = Math.random() < 0.2;
+  // toque humano (idea de Roy, subido 2026-10-07): ~1 de cada 3 respuestas trae
+  // una falta de dedo — controlado por código para que la frecuencia sea real y
+  // no quede al criterio del modelo. Solo la mitad de las veces se corrige en el
+  // siguiente mensaje: la gente real no se corrige siempre.
+  const conTypo = Math.random() < 0.33;
+  const seCorrige = Math.random() < 0.5;
   const systemPrompt = `${knowledgeBasePrompt}
 
 ## Con quién estás hablando
 ${contactName ? `Su nombre/usuario es: ${contactName}.` : "No sabes su nombre todavía."} Si el nombre indica claramente el género (ej. un nombre de mujer), NO uses "bro" ni "hermano" — usa el nombre directamente o un término neutral. Si el nombre no deja claro el género (ej. es un @usuario que no lo revela), usa lenguaje neutral sin género en vez de asumir. REGLA DE NOMBRES: NUNCA llames a la persona por su @usuario tal cual. Si el @usuario contiene un nombre de pila obvio (ej. @eduardonolasco51 -> Eduardo), usa ese nombre; si no lo contiene, no uses ningún nombre.
 
 ## Formato de tus mensajes
-Puedes dividir tu respuesta en 2 mensajes cortos separados por una línea que contenga solamente ||| — así se siente como chat real. Úsalo cuando quede natural, no siempre.${
+RECORDATORIO DURO: todo en minusculas, sin acentos, sin signos de apertura. Mensajes de 1 linea (maximo 2). Puedes dividir tu respuesta en 2 mensajes cortos separados por una línea que contenga solamente ||| — así se siente como chat real. Úsalo cuando quede natural, no siempre.${
     conTypo
-      ? `
+      ? seCorrige
+        ? `
 
-En ESTA respuesta: comete UNA pequeña falta de dedo en una palabra del primer mensaje (ideal en el nombre o una palabra común) y corrígete en el segundo mensaje con humor breve. Ejemplo del estilo: "Hola Toy" ||| "Perdon, Roy jaja te envío el link...". Solo un error, sutil, nada exagerado.`
+En ESTA respuesta: comete UNA pequeña falta de dedo en una palabra del primer mensaje (ideal en el nombre o una palabra común) y corrígete en el segundo mensaje con humor breve. Ejemplo del estilo: "hola toy" ||| "perdon, roy jaja te paso el link...". Solo un error, sutil, nada exagerado.`
+        : `
+
+En ESTA respuesta: comete UNA pequeña falta de dedo en una palabra (letras cambiadas o comidas por escribir rápido, ej. "cusro", "graicas", "entocnes") y NO la corrijas — déjala así, como quien escribe rápido y ni se fija. Solo un error, sutil.`
       : ""
   }`;
 
