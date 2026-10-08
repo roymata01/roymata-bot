@@ -2,47 +2,103 @@ import { createAnthropicClient } from "@/lib/anthropic";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { humanizarTexto } from "@/lib/ai/humanizar-texto";
 
-// Insistida humana (pedido de Roy 2026-10-07): cuando alguien deja al bot en
-// visto ~5 horas, se le insiste con DOS mensajes como lo haría Roy desde su
-// cel: primero su nombre alargado como de grito ("Brendaaa") y luego una sola
-// línea retomando lo que quedó pendiente.
+// Insistida humana en dos tiempos (pedido de Roy 2026-10-07): cuando alguien
+// deja al bot en visto ~5 horas, primero se manda SOLO su nombre alargado como
+// de grito ("Brendaaa"). Se esperan ~2 horas a ver si contesta; si sigue el
+// silencio, entonces va la línea — retome normal, o presión de venta si ya se
+// le mandó link de compra (ayuda / recalentar con SU caso / garantía 7 días).
 
-/** "Brenda López" -> "Brendaaa" · "Roy" -> "Roooy" · sin nombre -> "heey" */
-export function gritoNombre(nombre: string | null | undefined): string {
+/** "Brenda López" -> "Brendaaa" (estira la última vocal 2 o 3 letras al azar,
+ *  para que no se vea siempre igual). En plática de venta lleva "jaja" al
+ *  final para suavizar la presión. Sin nombre usable -> "heey". */
+export function gritoNombre(nombre: string | null | undefined, conJaja = false): string {
   const primer = (nombre ?? "").trim().split(/\s+/)[0] ?? "";
   const limpio = primer.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-  if (!/^[a-zñ]{2,15}$/.test(limpio)) return "heey";
-  let idx = -1;
-  for (const v of "aeiou") idx = Math.max(idx, limpio.lastIndexOf(v));
-  const alargado = idx < 0 ? limpio + "eee" : limpio.slice(0, idx + 1) + limpio[idx].repeat(2) + limpio.slice(idx + 1);
-  return alargado[0].toUpperCase() + alargado.slice(1);
+  let grito: string;
+  if (!/^[a-zñ]{2,15}$/.test(limpio)) {
+    grito = "heey";
+  } else {
+    let idx = -1;
+    for (const v of "aeiou") idx = Math.max(idx, limpio.lastIndexOf(v));
+    const extra = 1 + Math.floor(Math.random() * 2); // 1 o 2 letras extra (total 2-3 iguales)
+    const alargado =
+      idx < 0 ? limpio + "eee" : limpio.slice(0, idx + 1) + limpio[idx].repeat(extra) + limpio.slice(idx + 1);
+    grito = alargado[0].toUpperCase() + alargado.slice(1);
+  }
+  return conJaja ? `${grito} jaja` : grito;
 }
 
-/** La línea que va después del grito: retoma lo pendiente, estilo Roy.
- *  Analiza TODA la plática reciente (pedido de Roy 2026-10-07): si ya se
- *  mandó el link de compra del curso y no han comprado, la insistida pasa a
- *  modo presión — ayuda con la inscripción, recalentar con SU caso concreto,
- *  o la carta de la garantía de 7 días. */
-export async function lineaInsistida(conversationId: string): Promise<string | null> {
+/** ¿Un mensaje saliente es un grito de insistida? (para la fase 2 del cron) */
+export function esGrito(texto: string): boolean {
+  const t = (texto ?? "").trim();
+  return t.length <= 25 && /^[A-Za-zñÑ]*([aeiou])\1{1,3}[a-zñ]*( jaja)?$/.test(t);
+}
+
+/** ¿La plática ya es de venta? (el bot ya mandó un link de compra/acceso) */
+export function esPlaticaDeVenta(salientes: { content: string | null }[]): boolean {
+  return salientes.some(
+    (m) => m.content && /https?:\/\//.test(m.content) && /(curso|inscri|acceso|compra)/i.test(m.content)
+  );
+}
+
+async function historiaDe(conversationId: string): Promise<string> {
   const supabase = createAdminClient();
   const { data: historia } = await supabase
     .from("messages")
     .select("direction, content")
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: false })
-    .limit(25);
-  const chat = (historia ?? [])
+    .limit(40);
+  return (historia ?? [])
     .reverse()
     .filter((m) => m.content)
     .map((m) => `${m.direction === "in" ? "Cliente" : "Roy"}: ${m.content}`)
     .join("\n");
+}
+
+/** Si el contacto no tiene nombre usable (@catitos12), busca si lo dijo en la
+ *  plática y lo guarda en contacts.display_name. Devuelve el nombre o null. */
+export async function capturarNombreDeLaPlatica(
+  conversationId: string,
+  contactId: string
+): Promise<string | null> {
+  const chat = await historiaDe(conversationId);
+  if (!chat) return null;
+  try {
+    const anthropic = createAnthropicClient();
+    const r = await anthropic.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 10,
+      system: `Lee la plática. Si el CLIENTE dijo su propio nombre en algún momento ("soy caro", "me llamo luis", "mi nombre es..."), responde SOLO ese primer nombre capitalizado. Si nunca lo dijo, responde exactamente: NO`,
+      messages: [{ role: "user", content: chat }],
+    });
+    const texto = r.content
+      .filter((b) => b.type === "text")
+      .map((b) => (b as { text: string }).text)
+      .join("")
+      .trim();
+    if (!texto || texto.toUpperCase() === "NO" || texto.length > 20 || /\s/.test(texto)) return null;
+    const supabase = createAdminClient();
+    await supabase.from("contacts").update({ display_name: texto }).eq("id", contactId);
+    return texto;
+  } catch (e) {
+    console.error("capturarNombreDeLaPlatica:", e);
+    return null;
+  }
+}
+
+/** La línea que sigue al grito (2 h después, si no contestó). Analiza TODA la
+ *  plática: si ya se mandó link de compra y no han comprado → presión de venta
+ *  personalizada; si no → retome normal. */
+export async function lineaInsistida(conversationId: string): Promise<string | null> {
+  const chat = await historiaDe(conversationId);
   if (!chat) return null;
 
   const anthropic = createAnthropicClient();
   const r = await anthropic.messages.create({
     model: "claude-haiku-4-5",
     max_tokens: 80,
-    system: `Eres Roy Mata insistiendo por chat a alguien que lo dejó en visto hace horas. Ya le mandaste su nombre como grito ("Brendaaa"), ahora escribe SOLO el segundo mensaje. Analiza TODA la plática antes de escribir.
+    system: `Eres Roy Mata insistiendo por chat a alguien que lo dejó en visto. Hace un par de horas ya le mandaste su nombre como grito ("Brendaaa") y tampoco contestó; ahora escribe SOLO el siguiente mensaje. Analiza TODA la plática antes de escribir.
 
 CASO A — si en la plática Roy ya mandó un LINK DE COMPRA o de inscripción y el cliente no confirmó haber comprado: es seguimiento de venta. Elige UNA carta (la que no se haya usado ya en la plática):
 - ayuda: "veo que no adquiriste el curso, si necesitas ayuda en la inscripcion avisame"
@@ -52,7 +108,7 @@ Máximo 18 palabras, personalizada con lo que el cliente contó.
 
 CASO B — cualquier otra plática: UNA línea cortita (máximo 10 palabras) retomando lo pendiente o preguntando si vio tu mensaje. Ejemplos: "entonces q, te late el curso?" · "ya viste mi mensaje?" · "quedamos en algo o q jaja".
 
-Reglas duras para ambos casos: todo en minusculas, sin acentos, sin signos de apertura (¿ ¡), cero saludos (ya saludaste con el grito), sin apodos como bro o amigo, tono mexicano relajado. Responde SOLO con la línea, nada más.`,
+Reglas duras para ambos casos: todo en minusculas, sin acentos, sin signos de apertura (¿ ¡), cero saludos, sin apodos como bro o amigo, tono mexicano relajado. Responde SOLO con la línea, nada más.`,
     messages: [{ role: "user", content: `La plática:\n${chat}` }],
   });
   const linea = r.content
@@ -61,5 +117,5 @@ Reglas duras para ambos casos: todo en minusculas, sin acentos, sin signos de ap
     .join(" ")
     .trim()
     .replace(/^["']|["']$/g, "");
-  return humanizarTexto(linea && linea.length <= 120 ? linea : "ya viste mi mensaje?");
+  return humanizarTexto(linea && linea.length <= 140 ? linea : "ya viste mi mensaje?");
 }
