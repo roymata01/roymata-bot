@@ -1,5 +1,6 @@
 import { createAnthropicClient } from "@/lib/anthropic";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { humanizarTexto } from "@/lib/ai/humanizar-texto";
 
 // Insistida humana (pedido de Roy 2026-10-07): cuando alguien deja al bot en
 // visto ~5 horas, se le insiste con DOS mensajes como lo haría Roy desde su
@@ -47,5 +48,5 @@ Reglas duras: todo en minusculas, sin acentos, sin signos de apertura (¿ ¡), c
     .join(" ")
     .trim()
     .replace(/^["']|["']$/g, "");
-  return linea && linea.length <= 120 ? linea : "ya viste mi mensaje?";
+  return humanizarTexto(linea && linea.length <= 120 ? linea : "ya viste mi mensaje?");
 }

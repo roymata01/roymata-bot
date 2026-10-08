@@ -1,6 +1,7 @@
 import { createAnthropicClient } from "@/lib/anthropic";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildSystemPrompt } from "@/lib/ai/build-system-prompt";
+import { humanizarTexto } from "@/lib/ai/humanizar-texto";
 import { estimateCostUsd } from "@/lib/ai/pricing";
 import type { Channel } from "@/types/database";
 
@@ -36,7 +37,7 @@ export async function generateAiReply(conversationId: string, channel: Channel, 
 ${contactName ? `Su nombre/usuario es: ${contactName}.` : "No sabes su nombre todavía."} Si el nombre indica claramente el género (ej. un nombre de mujer), NO uses "bro" ni "hermano" — usa el nombre directamente o un término neutral. Si el nombre no deja claro el género (ej. es un @usuario que no lo revela), usa lenguaje neutral sin género en vez de asumir. REGLA DE NOMBRES: NUNCA llames a la persona por su @usuario tal cual. Si el @usuario contiene un nombre de pila obvio (ej. @eduardonolasco51 -> Eduardo), usa ese nombre; si no lo contiene, no uses ningún nombre.
 
 ## Formato de tus mensajes
-RECORDATORIO DURO: todo en minusculas, sin acentos, sin signos de apertura. Mensajes de 1 linea (maximo 2). Puedes dividir tu respuesta en 2 mensajes cortos separados por una línea que contenga solamente ||| — así se siente como chat real. Úsalo cuando quede natural, no siempre.${
+RECORDATORIO DURO: todo en minusculas, sin acentos, sin signos de apertura. Mensajes de 1 linea (maximo 2): si un mensaje te sale de mas de ~15 palabras, recortalo o partelo con |||. Puedes dividir tu respuesta en 2 mensajes cortos separados por una línea que contenga solamente ||| — así se siente como chat real. Úsalo cuando quede natural, no siempre.${
     conTypo
       ? seCorrige
         ? `
@@ -74,7 +75,7 @@ En ESTA respuesta: comete UNA pequeña falta de dedo en una palabra (letras camb
   // la respuesta puede venir en varios mensajes separados por ||| (chat real)
   const partes = replyText
     .split(/\n?\s*\|\|\|\s*\n?/)
-    .map((p) => p.trim())
+    .map((p) => humanizarTexto(p.trim()))
     .filter(Boolean)
     .slice(0, 3);
 
