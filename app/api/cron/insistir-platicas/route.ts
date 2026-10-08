@@ -155,6 +155,49 @@ export async function GET(req: NextRequest) {
       if (!ultimo || ultimo.direction !== "out" || ultimo.sender_type !== "ai") continue;
       if (!esGrito(String(ultimo.content ?? ""))) continue;
 
+      // Carta premium (Roy 2026-10-07): si es plática de venta y nunca ha
+      // escuchado el audio de seguimiento, va la nota de voz REAL de Roy en
+      // vez del texto — una sola vez por persona, la segunda se quema.
+      const { data: outs } = await supabase
+        .from("messages")
+        .select("content")
+        .eq("conversation_id", conv.id)
+        .eq("direction", "out")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      const venta = esPlaticaDeVenta((outs ?? []).map((m) => ({ content: m.content as string | null })));
+      const yaAudio = (outs ?? []).some((m) =>
+        String(m.content ?? "").startsWith("🎙️ (audio de Roy) seguimiento")
+      );
+      if (venta && !yaAudio) {
+        const { markerAudio: _ignora, enviarAudioPregrabado, AUDIOS_ROY } = await import("@/lib/voz/audios-pregrabados");
+        void _ignora;
+        const { data: msg } = await supabase
+          .from("messages")
+          .insert({
+            conversation_id: conv.id,
+            contact_id: conv.contact_id,
+            channel: conv.channel,
+            direction: "out",
+            sender_type: "ai",
+            content: `🎙️ (audio de Roy) ${AUDIOS_ROY.seguimiento}`,
+          })
+          .select()
+          .single();
+        if (msg) {
+          try {
+            const mid = await enviarAudioPregrabado(conv.channel, contacto.external_id, "seguimiento");
+            await supabase.from("messages").update({ status: "sent", meta_message_id: mid }).eq("id", msg.id);
+            lineas.push(conv.id as string);
+            await espera(1500);
+            continue;
+          } catch (e) {
+            console.error("Audio de seguimiento falló; va texto:", conv.id, e);
+            await supabase.from("messages").delete().eq("id", msg.id);
+          }
+        }
+      }
+
       const linea = await lineaInsistida(conv.id);
       if (!linea) continue;
       if (await manda(conv as never, contacto.external_id, linea)) {

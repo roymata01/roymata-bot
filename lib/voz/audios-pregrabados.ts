@@ -14,6 +14,8 @@ export const AUDIOS_ROY = {
   empujon: "animate, no te vas a arrepentir",
   papas: "para papas con hijos chicos",
   soy_yo: "si, soy yo de verdad",
+  // solo lo usa la insistida automática (no está en la KB a propósito)
+  seguimiento: "seguimiento: paso a ver si te intereso el curso",
 } as const;
 
 export type AudioRoyKey = keyof typeof AUDIOS_ROY;
