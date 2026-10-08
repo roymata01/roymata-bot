@@ -72,7 +72,14 @@ export async function processInboundMessage(msg: InboundMessage) {
   // círculo — el bot no se activa para nada (ni keyword, ni seguimiento, ni IA);
   // el mensaje solo queda guardado para que Roy conteste él. La escalación de
   // emergencias (arriba) sí corre incluso con amigos, por seguridad.
-  if (msg.channel === "instagram" && (await royFollowsInstagramUser(msg.externalId))) return;
+  // Excepción: @rodrigo.mataa es la cuenta de PRUEBA del propio Roy (7-oct) —
+  // ahí el bot sí contesta aunque Roy la siga, para poder probarse a sí mismo.
+  const CUENTA_PRUEBA_ROY = "727816726707180"; // IG @rodrigo.mataa
+  if (
+    msg.channel === "instagram" &&
+    msg.externalId !== CUENTA_PRUEBA_ROY &&
+    (await royFollowsInstagramUser(msg.externalId))
+  ) return;
 
   // Pausa humana antes de cualquier respuesta automática: nadie contesta en 1
   // segundo. La escalación de emergencias ya corrió (esa sí es instantánea).
