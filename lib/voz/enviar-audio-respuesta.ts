@@ -19,19 +19,25 @@ export async function enviarAudioRespuesta(
   const limpio = limpiarParaVoz(texto);
   if (limpio.length < 12) throw new Error("Texto muy corto para audio");
 
-  if (channel === "whatsapp") return enviarWhatsApp(externalId, limpio);
+  if (channel === "whatsapp") {
+    const ogg = await ttsRoy(limpio, "opus_48000_32"); // ya viene en Ogg Opus
+    return enviarOggWhatsApp(externalId, ogg);
+  }
   const url = await subirWav(limpio);
   if (channel === "instagram") return enviarInstagram(externalId, url);
   return enviarMessenger(externalId, url);
 }
 
-async function enviarWhatsApp(to: string, texto: string): Promise<string> {
-  const ogg = await ttsRoy(texto, "opus_48000_32"); // ya viene en Ogg Opus
+/** Sube un Ogg Opus ya hecho y lo manda como nota de voz (mic verde real).
+ *  Lo usan también los audios PREGRABADOS de Roy. */
+export async function enviarOggWhatsApp(to: string, oggEntrada: ArrayBuffer | Uint8Array): Promise<string> {
+  // copia a un ArrayBuffer propio: Blob no acepta vistas sobre ArrayBufferLike
+  const ogg = Uint8Array.from(oggEntrada instanceof Uint8Array ? oggEntrada : new Uint8Array(oggEntrada));
   const base = `https://graph.facebook.com/v21.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}`;
   const fd = new FormData();
   fd.append("messaging_product", "whatsapp");
   fd.append("type", "audio/ogg");
-  fd.append("file", new Blob([new Uint8Array(ogg)], { type: "audio/ogg" }), "nota.ogg");
+  fd.append("file", new Blob([ogg.buffer as ArrayBuffer], { type: "audio/ogg" }), "nota.ogg");
   const up = await fetch(`${base}/media`, {
     method: "POST",
     headers: { Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}` },
@@ -68,7 +74,7 @@ async function subirWav(texto: string): Promise<string> {
   return storage.getPublicUrl(ruta).data.publicUrl;
 }
 
-async function enviarInstagram(recipientId: string, audioUrl: string): Promise<string> {
+export async function enviarInstagram(recipientId: string, audioUrl: string): Promise<string> {
   const res = await fetch("https://graph.instagram.com/v21.0/me/messages", {
     method: "POST",
     headers: {
@@ -84,7 +90,7 @@ async function enviarInstagram(recipientId: string, audioUrl: string): Promise<s
   return (await res.json()).message_id as string;
 }
 
-async function enviarMessenger(psid: string, audioUrl: string): Promise<string> {
+export async function enviarMessenger(psid: string, audioUrl: string): Promise<string> {
   const res = await fetch(
     `https://graph.facebook.com/v21.0/me/messages?access_token=${process.env.FB_PAGE_ACCESS_TOKEN}`,
     {

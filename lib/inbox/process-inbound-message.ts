@@ -199,6 +199,24 @@ export async function processInboundMessage(msg: InboundMessage) {
     }
   }
   for (const [i, mensaje] of mensajes.entries()) {
+    // Burbuja-marcador "[AUDIO:curso]" = mandar la nota de voz REAL de Roy
+    const { markerAudio, enviarAudioPregrabado, AUDIOS_ROY } = await import("@/lib/voz/audios-pregrabados");
+    const audioKey = markerAudio(mensaje.text);
+    if (audioKey) {
+      try {
+        const metaId = await enviarAudioPregrabado(msg.channel, msg.externalId, audioKey);
+        await supabase
+          .from("messages")
+          .update({ status: "sent", meta_message_id: metaId, content: `🎙️ (audio de Roy) ${AUDIOS_ROY[audioKey]}` })
+          .eq("id", mensaje.messageId);
+      } catch (error) {
+        // sin fallback a texto: un marcador como texto se vería roto
+        console.error(`Audio pregrabado ${audioKey} falló:`, error);
+        await supabase.from("messages").delete().eq("id", mensaje.messageId);
+      }
+      if (i < mensajes.length - 1) await new Promise((r) => setTimeout(r, 20_000));
+      continue;
+    }
     try {
       const metaMessageId = await sendForChannel(msg.channel, msg.externalId, mensaje.text);
       await supabase.from("messages").update({ status: "sent", meta_message_id: metaMessageId }).eq("id", mensaje.messageId);
