@@ -72,9 +72,10 @@ En ESTA respuesta: comete UNA pequeña falta de dedo en una palabra (letras camb
     .join("\n")
     .trim();
 
-  // la respuesta puede venir en varios mensajes separados por ||| (chat real)
+  // la respuesta puede venir en varios mensajes separados por ||| (chat real);
+  // un renglón vacío también corta — a veces el modelo separa así sus burbujas
   const partes = replyText
-    .split(/\n?\s*\|\|\|\s*\n?/)
+    .split(/\n?\s*\|\|\|\s*\n?|\n{2,}/)
     .map((p) => humanizarTexto(p.trim()))
     .filter(Boolean)
     .slice(0, 3);
