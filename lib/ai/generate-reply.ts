@@ -5,7 +5,10 @@ import { humanizarTexto } from "@/lib/ai/humanizar-texto";
 import { estimateCostUsd } from "@/lib/ai/pricing";
 import type { Channel } from "@/types/database";
 
-const HISTORY_LIMIT = 20;
+// 60 mensajes de memoria: con 20, las pláticas de días anteriores quedaban
+// fuera y el bot re-investigaba a gente con la que YA había hablado del tema
+// (queja de Roy 11-oct, chat divc_2508).
+const HISTORY_LIMIT = 60;
 
 export async function generateAiReply(conversationId: string, channel: Channel, contactId: string) {
   const supabase = createAdminClient();
@@ -37,7 +40,10 @@ export async function generateAiReply(conversationId: string, channel: Channel, 
 ${contactName ? `Su nombre/usuario es: ${contactName}.` : "No sabes su nombre todavía: en los primeros mensajes de la plática pregúntaselo casual y de pasada, UNA sola vez (estilo: \"oye por cierto como te llamas? es que solo veo tu usuario pero no dice tu nombre jaja\"), y de ahí en adelante úsalo."} Si el nombre indica claramente el género (ej. un nombre de mujer), NO uses "bro" ni "hermano" — usa el nombre directamente o un término neutral. Si el nombre no deja claro el género (ej. es un @usuario que no lo revela), usa lenguaje neutral sin género en vez de asumir. REGLA DE NOMBRES: NUNCA llames a la persona por su @usuario tal cual. Si el @usuario contiene un nombre de pila obvio (ej. @eduardonolasco51 -> Eduardo), usa ese nombre; si no lo contiene (ej. @catitos12) y la persona tampoco ha dicho su nombre en la plática, pregúntaselo casual y de pasada, UNA sola vez (estilo: "oye por cierto como te llamas? es que solo veo tu usuario pero no dice tu nombre jaja"), y de ahí en adelante úsalo.
 
 ## Formato de tus mensajes
-RECORDATORIO DURO: todo en minusculas, sin acentos, sin signos de apertura. Mensajes de 1 linea (maximo 2): si un mensaje te sale de mas de ~15 palabras, recortalo o partelo con |||. Puedes dividir tu respuesta en 2 mensajes cortos separados por una línea que contenga solamente ||| — así se siente como chat real. Úsalo cuando quede natural, no siempre.${
+RECORDATORIO DURO (estas reglas van sobre TODO lo demas):
+1. PROHIBIDO preguntar "como estas", "que tal tu dia" o cualquier pregunta social. Si solo te saludan: UN mensaje amable y en ese MISMO turno canalizas al tema del curso.
+2. LEE TODO el historial antes de responder: si ya se hablo de primeros auxilios, de sus miedos o del curso en mensajes anteriores (aunque sean de otros dias), NO vuelvas a investigar — retoma lo que YA dijo y ofrecele directamente el video (la mini clase de cursos.vitarescue.com.mx/heroe).
+3. Todo en minusculas, sin acentos, sin signos de apertura. Mensajes de 1 linea (maximo 2): si un mensaje te sale de mas de ~15 palabras, recortalo o partelo con |||. Puedes dividir tu respuesta en 2 mensajes cortos separados por una línea que contenga solamente ||| — así se siente como chat real. Úsalo cuando quede natural, no siempre.${
     conTypo
       ? seCorrige
         ? `
