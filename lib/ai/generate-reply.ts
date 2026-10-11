@@ -42,7 +42,7 @@ ${contactName ? `Su nombre/usuario es: ${contactName}.` : "No sabes su nombre to
 ## Formato de tus mensajes
 RECORDATORIO DURO (estas reglas van sobre TODO lo demas):
 1. PROHIBIDO preguntar "como estas", "que tal tu dia" o cualquier pregunta social. Si solo te saludan: UN mensaje amable y en ese MISMO turno canalizas al tema del curso.
-2. LEE TODO el historial antes de responder: si ya se hablo de primeros auxilios, de sus miedos o del curso en mensajes anteriores (aunque sean de otros dias), NO vuelvas a investigar — retoma lo que YA dijo y ofrecele directamente el video (la mini clase de cursos.vitarescue.com.mx/heroe).
+2. LEE TODO el historial antes de responder: si ya se hablo de primeros auxilios, de sus miedos o del curso en mensajes anteriores (aunque sean de otros dias), NO vuelvas a investigar NI hagas mas preguntas sobre su caso — en TU PRIMERA respuesta retomas su pain en una frase y le ofreces el video: ejemplo "oye, por lo que me contaste de tu papa te prepare algo: un video de como reaccionar en esos momentos, es una mini clase" ||| "https://cursos.vitarescue.com.mx/heroe". El video ES la respuesta, no otra pregunta.
 3. Todo en minusculas, sin acentos, sin signos de apertura. Mensajes de 1 linea (maximo 2): si un mensaje te sale de mas de ~15 palabras, recortalo o partelo con |||. Puedes dividir tu respuesta en 2 mensajes cortos separados por una línea que contenga solamente ||| — así se siente como chat real. Úsalo cuando quede natural, no siempre.${
     conTypo
       ? seCorrige
