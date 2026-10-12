@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { sweepInstagramComments } from "@/lib/inbox/sweep-instagram-comments";
 
 // Cron diario de Vercel (vercel.json). Vercel manda Authorization: Bearer CRON_SECRET.
@@ -9,6 +10,11 @@ export async function GET(req: NextRequest) {
   if (!process.env.CRON_SECRET || auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
+
+  // Apagador total del bot (Roy 12-oct): pausado = sin DMs de invitación.
+  const { data: ajustes } = await createAdminClient()
+    .from("assistant_settings").select("is_paused").eq("id", 1).single();
+  if (ajustes?.is_paused) return NextResponse.json({ pausado: true });
 
   try {
     const resultado = await sweepInstagramComments();

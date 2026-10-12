@@ -15,6 +15,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
   const supabase = createAdminClient();
+  // Apagador total del bot (Roy 12-oct): pausado = este cron no manda nada.
+  {
+    const { data: ajustes } = await supabase.from("assistant_settings").select("is_paused").eq("id", 1).single();
+    if (ajustes?.is_paused) return NextResponse.json({ pausado: true });
+  }
   const { data: activas } = await supabase
     .from("wa_campaigns")
     .select("id, por_dia")

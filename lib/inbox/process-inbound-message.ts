@@ -68,6 +68,16 @@ export async function processInboundMessage(msg: InboundMessage) {
 
   if (escalatedByKeyword) return;
 
+  // APAGADOR TOTAL (Roy 12-oct): con is_paused, NINGÚN mensaje sale — ni la
+  // IA ni los automáticos fijos (QUIERO, palabras clave, seguimiento de
+  // comentario, campañas). El mensaje queda guardado y las alertas de
+  // emergencia de arriba sí corrieron.
+  {
+    const { data: ajustes } = await createAdminClient()
+      .from("assistant_settings").select("is_paused").eq("id", 1).single();
+    if (ajustes?.is_paused) return;
+  }
+
   // Regla de Roy (2026-08-13): si Roy SIGUE a la persona en Instagram, es de su
   // círculo — el bot no se activa para nada (ni keyword, ni seguimiento, ni IA);
   // el mensaje solo queda guardado para que Roy conteste él. La escalación de
