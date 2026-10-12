@@ -41,6 +41,9 @@ export async function GET(req: NextRequest) {
   if (hora < 9 || hora >= 22) return NextResponse.json({ dormido: true, hora });
 
   const supabase = createAdminClient();
+  // El apagador general del bot también apaga las insistidas (Roy 12-oct).
+  const { data: ajustes } = await supabase.from("assistant_settings").select("is_paused").eq("id", 1).single();
+  if (ajustes?.is_paused) return NextResponse.json({ pausado: true });
   const ahora = Date.now();
 
   async function manda(conv: { id: string; channel: "whatsapp" | "instagram" | "messenger"; contact_id: string }, externalId: string, texto: string): Promise<boolean> {
