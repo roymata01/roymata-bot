@@ -83,7 +83,7 @@ export async function sweepInstagramComments() {
         text: c.text ?? null,
         raw: { origen: "barrida", comment: c },
       };
-      if (esComentarioQuiero(comentario.text)) await handleComentarioQuiero(comentario);
+      if (esComentarioQuiero(comentario.text)) await handleComentarioQuiero({ channel: "instagram", ...comentario });
       else if (invitacionGeneral) await handleInstagramComment(comentario);
       else continue; // invitación general apagada: solo QUIERO
       usuariosInvitados.add(c.from.id);

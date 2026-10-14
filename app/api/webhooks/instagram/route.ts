@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
         await new Promise((r) => setTimeout(r, 8000 + Math.random() * 7000));
         // "QUIERO" = entrada al flujo del Método HÉROE; lo demás sigue la
         // invitación normal por comentario.
-        if (esComentarioQuiero(comment.text)) await handleComentarioQuiero(comment);
+        if (esComentarioQuiero(comment.text)) await handleComentarioQuiero({ channel: "instagram", ...comment });
         else await handleInstagramComment(comment);
       }
     } catch (error) {
