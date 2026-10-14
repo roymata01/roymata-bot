@@ -4,6 +4,7 @@ import {
   ClipboardIcon,
   DocIcon,
   DollarIcon,
+  FilterIcon,
   FlaskIcon,
   IdIcon,
   InboxIcon,
@@ -52,6 +53,7 @@ export const MUNDOS: Mundo[] = [
     home: "/personalizacion",
     items: [
       { href: "/personalizacion", label: "Personalización", icon: <SlidersIcon /> },
+      { href: "/flujo", label: "Flujo de venta", icon: <FilterIcon /> },
       { href: "/templates", label: "Templates", icon: <DocIcon /> },
       { href: "/workflows", label: "Workflows", icon: <ZapIcon /> },
       { href: "/probar-bot", label: "Probar el bot", icon: <FlaskIcon /> },
