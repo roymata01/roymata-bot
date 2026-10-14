@@ -40,6 +40,8 @@ EMBUDO (el bot sí contesta): interés en aprender primeros auxilios, dudas del 
 
 SOCIAL (el bot se calla): saludos sueltos en plática ya avanzada, coqueteo, chistes o memes, opiniones de otros temas (deportes, viajes, su vida social), preguntas personales hacia Roy (que si tiene novia, que si salen), reclamos personales, cualquier cosa que no mueva el embudo.
 
+Si el mensaje MEZCLA las dos cosas (algo del embudo + algo social), es EMBUDO.
+
 Responde ÚNICAMENTE una palabra: EMBUDO o SOCIAL.`,
       messages: [
         {
