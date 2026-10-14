@@ -89,9 +89,13 @@ export async function processInboundMessage(msg: InboundMessage) {
   // círculo — el bot no se activa para nada (ni keyword, ni seguimiento, ni IA);
   // el mensaje solo queda guardado para que Roy conteste él. La escalación de
   // emergencias (arriba) sí corre incluso con amigos, por seguridad.
+  // EXCEPCIÓN (14-oct): quien entró al flujo QUIERO lo pidió comentando — el
+  // bot sí le sigue la plática aunque Roy lo siga.
+  const enFlujoQuiero = (contact.tags ?? []).includes("flujo-quiero");
   if (
     msg.channel === "instagram" &&
     !esCuentaPrueba &&
+    !enFlujoQuiero &&
     (await royFollowsInstagramUser(msg.externalId))
   ) return;
 
@@ -118,7 +122,6 @@ export async function processInboundMessage(msg: InboundMessage) {
   // el VIDEO determinista (sin dejar que la IA improvise); lo demás lo lleva
   // la IA con el playbook del flujo. A estos contactos NO les aplica el
   // handleQuiero viejo (ese es del CTA de la Gen 2).
-  const enFlujoQuiero = (contact.tags ?? []).includes("flujo-quiero");
   if (enFlujoQuiero) {
     const videoEnviado = await manejarRespuestaFlujoQuiero(
       conversation.id, contact.id, msg.channel, msg.externalId, msg.content

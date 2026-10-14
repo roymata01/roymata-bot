@@ -23,9 +23,10 @@ export async function handleComentarioQuiero(comment: InstagramComment) {
     .from("assistant_settings").select("is_paused").eq("id", 1).single();
   if (settings?.is_paused && !esPrueba) return;
 
-  // Gente que Roy sigue (colegas, amigos): el bot no les escribe — salvo la
-  // cuenta de prueba, que Roy sigue por definición.
-  if (!esPrueba && (await roySigueAlUsuario(comment.userId))) return;
+  // A diferencia de la invitación general, aquí NO se excluye a la gente que
+  // Roy sigue: comentar QUIERO es pedir el video explícitamente (Roy 14-oct,
+  // "sirve igual para las personas que sigo?"). La lista manual de excluidos
+  // sí se respeta.
   if (await estaExcluido(supabase, "instagram", comment.username)) return;
 
   // Un DM por persona, para siempre: mismo candado que las invitaciones
