@@ -81,6 +81,17 @@ export const FLUJO_QUIERO: FaseFlujo[] = [
         },
       },
       {
+        tipo: "nodo",
+        nodo: {
+          id: "reply-publico",
+          tipo: "bot",
+          titulo: "Respuesta pública al comentario (una al azar)",
+          texto:
+            "listo, ya te lo mande por mensaje 📩 ||| ya te escribi por dm, checa tus mensajes ||| te lo acabo de mandar al chat 🙌 ||| revisa tus mensajes, ya te lo envie ||| ya lo tienes en tus dm 👀 ||| listo! checa tus mensajes ||| te lo mande por privado, no se te vaya a solicitudes ||| ya quedo, te escribi por dm 💪 ||| checa el chat, ahi te lo deje ||| enviado 📩 revisa tus mensajes",
+          nota: "justo despues de mandar el dm, el bot contesta el comentario en publico con UNA de estas (al azar) — para que los demas vean que comentar funciona. cada burbuja es una version, agrega o quita las que quieras",
+        },
+      },
+      {
         tipo: "decision",
         id: "d-contesta",
         pregunta: "que contesta?",

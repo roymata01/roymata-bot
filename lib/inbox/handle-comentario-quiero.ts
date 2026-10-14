@@ -3,6 +3,7 @@ import { estaExcluido } from "@/lib/inbox/handle-facebook-comment";
 import { roySigueAlUsuario } from "@/lib/meta/fetch-profile";
 import { nombreDesdeUsername } from "@/lib/ai/name-from-username";
 import { sendInstagramPrivateReply } from "@/lib/meta/send-private-reply";
+import { replyToInstagramComment } from "@/lib/meta/reply-to-comment";
 import { burbujasDeNodo, TAG_FLUJO_QUIERO, USUARIO_PRUEBA_ROY } from "@/lib/flujo/quiero";
 import type { InstagramComment } from "@/lib/meta/parse-comment-webhook";
 
@@ -66,6 +67,19 @@ export async function handleComentarioQuiero(comment: InstagramComment) {
       resultado = await sendInstagramPrivateReply(comment.commentId, textoDm);
     }
     await supabase.from("comment_invites").update({ status: "sent" }).eq("id", invite.id);
+
+    // Respuesta PÚBLICA al comentario (Roy 14-oct): "ya te lo mande por dm",
+    // una versión al azar de las 10 editables en /flujo — los demás ven que
+    // comentar QUIERO funciona. Si falla, el DM ya salió: no se relanza.
+    try {
+      const versiones = await burbujasDeNodo("reply-publico");
+      if (versiones.length > 0) {
+        await new Promise((r) => setTimeout(r, 3000 + Math.random() * 4000));
+        await replyToInstagramComment(comment.commentId, versiones[Math.floor(Math.random() * versiones.length)]);
+      }
+    } catch (e) {
+      console.error("Flujo QUIERO: respuesta pública falló:", e);
+    }
 
     if (resultado.recipientId) {
       // Contacto con @usuario + etiqueta del flujo (la etiqueta es lo que
