@@ -1,6 +1,7 @@
 import {
   BookIcon,
   ChartIcon,
+  ChatIcon,
   ClipboardIcon,
   DocIcon,
   DollarIcon,
@@ -57,6 +58,7 @@ export const MUNDOS: Mundo[] = [
       { href: "/templates", label: "Templates", icon: <DocIcon /> },
       { href: "/workflows", label: "Workflows", icon: <ZapIcon /> },
       { href: "/probar-bot", label: "Probar el bot", icon: <FlaskIcon /> },
+      { href: "/tiktok", label: "TikTok", icon: <ChatIcon /> },
       { href: "/costos", label: "Costos de IA", icon: <DollarIcon /> },
     ],
   },
