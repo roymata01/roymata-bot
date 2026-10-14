@@ -93,10 +93,15 @@ export async function processInboundMessage(msg: InboundMessage) {
   // QUIERO el bot SÍ le manda el video si contesta "si" (paso determinista,
   // más abajo) — pero JAMÁS le platica con la IA: sus chats son personales
   // y los contesta Roy.
+  // Etiqueta "cuenta_prueba": Roy marca un contacto (p.ej. un amigo que lo
+  // está ayudando a probar) para que el bot lo trate como lead NORMAL aunque
+  // Roy lo siga. Quitarla al terminar la prueba.
+  const esPruebaManual = (contact.tags ?? []).includes("cuenta_prueba");
   const enFlujoQuiero = (contact.tags ?? []).includes("flujo-quiero");
   const esSeguidoPorRoy =
     msg.channel === "instagram" &&
     !esCuentaPrueba &&
+    !esPruebaManual &&
     (await royFollowsInstagramUser(msg.externalId));
   if (esSeguidoPorRoy && !enFlujoQuiero) return;
 
