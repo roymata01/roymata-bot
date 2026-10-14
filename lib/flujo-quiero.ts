@@ -77,7 +77,7 @@ export const FLUJO_QUIERO: FaseFlujo[] = [
           tipo: "bot",
           titulo: "El DM de arranque",
           texto: "oye! vi que comentaste quiero en mi video ||| quieres que te pase el video con la mini clase que grabe para ti?",
-          nota: "se manda al momento del comentario, en dos burbujas",
+          nota: "se manda al momento del comentario. va en UN solo DM (dos renglones): meta no deja mandar mas mensajes hasta que la persona conteste",
         },
       },
       {

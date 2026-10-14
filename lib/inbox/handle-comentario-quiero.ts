@@ -3,7 +3,6 @@ import { estaExcluido } from "@/lib/inbox/handle-facebook-comment";
 import { roySigueAlUsuario } from "@/lib/meta/fetch-profile";
 import { nombreDesdeUsername } from "@/lib/ai/name-from-username";
 import { sendInstagramPrivateReply } from "@/lib/meta/send-private-reply";
-import { sendForChannel } from "@/lib/meta/send-message";
 import { burbujasDeNodo, TAG_FLUJO_QUIERO, USUARIO_PRUEBA_ROY } from "@/lib/flujo/quiero";
 import type { InstagramComment } from "@/lib/meta/parse-comment-webhook";
 
@@ -52,30 +51,22 @@ export async function handleComentarioQuiero(comment: InstagramComment) {
   const nombre = comment.username ? await nombreDesdeUsername(comment.username) : null;
   const burbujas = await burbujasDeNodo("dm-inicial", nombre);
   if (burbujas.length === 0) return;
+  // Meta solo permite UN mensaje de respuesta privada a un comentario (los
+  // mensajes extra rebotan hasta que la persona conteste) — así que el DM de
+  // arranque completo va en un solo mensaje, con las burbujas como renglones.
+  const textoDm = burbujas.join("\n");
 
   try {
-    // La primera burbuja va como private reply (la única forma de abrir el DM
-    // desde un comentario); las demás, ya con el IGSID, como mensajes normales.
     let resultado;
     try {
-      resultado = await sendInstagramPrivateReply(comment.commentId, burbujas[0]);
+      resultado = await sendInstagramPrivateReply(comment.commentId, textoDm);
     } catch {
       await new Promise((r) => setTimeout(r, 3000));
-      resultado = await sendInstagramPrivateReply(comment.commentId, burbujas[0]);
+      resultado = await sendInstagramPrivateReply(comment.commentId, textoDm);
     }
     await supabase.from("comment_invites").update({ status: "sent" }).eq("id", invite.id);
 
     if (resultado.recipientId) {
-      for (const burbuja of burbujas.slice(1)) {
-        await new Promise((r) => setTimeout(r, 4000 + Math.random() * 3000));
-        try {
-          await sendForChannel("instagram", resultado.recipientId, burbuja);
-        } catch (e) {
-          console.error("Flujo QUIERO: burbuja extra falló:", e);
-          break;
-        }
-      }
-
       // Contacto con @usuario + etiqueta del flujo (la etiqueta es lo que
       // activa el playbook y el sí-corto en los mensajes que vengan).
       const { data: existente } = await supabase
