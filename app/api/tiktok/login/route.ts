@@ -8,7 +8,10 @@ export async function GET(req: NextRequest) {
   const url = new URL("https://www.tiktok.com/v2/auth/authorize/");
   url.searchParams.set("client_key", process.env.TIKTOK_CLIENT_KEY ?? "");
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", "user.info.basic,video.upload,video.publish");
+  // Solo los scopes de ESTA revisión: el video.publish (Direct Post) se
+  // pedirá en una revisión posterior — sin auditar, TikTok solo deja publicar
+  // directo en cuentas privadas y Roy no va a privatizar @roymata01.
+  url.searchParams.set("scope", "user.info.basic,video.upload");
   url.searchParams.set("redirect_uri", process.env.TIKTOK_REDIRECT_URI ?? `${req.nextUrl.origin}/api/tiktok/callback`);
   url.searchParams.set("state", state);
 

@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readFile } from "fs/promises";
-import path from "path";
 import { accessTokenTikTok } from "@/lib/tiktok/token";
 
 const API = "https://open.tiktokapis.com/v2";
@@ -23,7 +21,14 @@ export async function POST(req: NextRequest) {
     // "directo" = Direct Post — hasta que TikTok audite la app, solo funciona
     // en cuentas PRIVADAS (error unaudited_client_can_only_post_to_private_accounts).
     const modo = cuerpo?.modo === "directo" ? "directo" : "borrador";
-    const video = await readFile(path.join(process.cwd(), "public", "tiktok-demo.mp4"));
+    // El video vive en una URL pública (env TIKTOK_DEMO_VIDEO_URL o el mp4 del
+    // propio sitio) — en Vercel el filesystem de la función no trae public/.
+    const videoUrl = process.env.TIKTOK_DEMO_VIDEO_URL || `${req.nextUrl.origin}/tiktok-demo.mp4`;
+    const videoRes = await fetch(videoUrl);
+    if (!videoRes.ok) {
+      return NextResponse.json({ error: `No se pudo leer el video (${videoRes.status})` }, { status: 500 });
+    }
+    const video = Buffer.from(await videoRes.arrayBuffer());
 
     const sourceInfo = {
       source: "FILE_UPLOAD",

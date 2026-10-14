@@ -124,20 +124,14 @@ export default function TikTokPage() {
             <div className="card flex flex-col items-start gap-3 p-5">
               <h3 className="text-[13px] font-semibold">Video de prueba (Content Posting API)</h3>
               <p className="text-[13px] text-[var(--text-2)]">
-                <strong>Mandar como borrador:</strong> el video llega a tu bandeja de TikTok y tú lo
-                terminas de publicar desde la app — funciona ya con tu cuenta.
-                <br />
-                <strong>Publicar directo:</strong> se publica solo (privado). Mientras TikTok no audite la
-                app, solo funciona en cuentas privadas — es el modo del video demo.
+                El sistema sube el video a tu cuenta vía la API y te llega a tu bandeja de TikTok — ahí lo
+                terminas de publicar desde la app, como cualquier video tuyo.
+                {/* El botón de Direct Post (video.publish) regresa cuando TikTok
+                    audite la app: sin auditar solo funciona en cuentas privadas. */}
               </p>
-              <div className="flex flex-wrap gap-2">
-                <button onClick={() => publicar("borrador")} disabled={publicando} className="btn btn-primary">
-                  {publicando ? "Enviando..." : "Mandar como borrador"}
-                </button>
-                <button onClick={() => publicar("directo")} disabled={publicando} className="btn btn-ghost">
-                  Publicar directo
-                </button>
-              </div>
+              <button onClick={() => publicar("borrador")} disabled={publicando} className="btn btn-primary">
+                {publicando ? "Enviando..." : "Mandar a mi TikTok"}
+              </button>
               {resultado && (
                 <p className="rounded-lg border border-[#46b380]/25 bg-[#46b380]/10 px-3 py-2 text-[12px] text-[#2e8a5f]">{resultado}</p>
               )}
