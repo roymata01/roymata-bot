@@ -32,9 +32,13 @@ export async function sweepInstagramComments() {
 
   const { data: settings } = await supabase.from("assistant_settings").select("*").eq("id", 1).single();
   const config = settings as { comment_dm_enabled?: boolean; is_paused?: boolean } | null;
-  if (!config?.comment_dm_enabled || config.is_paused) {
+  if (config?.is_paused) {
     return { estado: "apagado", revisados: 0, enviados: 0 };
   }
+  // comment_dm_enabled solo apaga la invitación GENERAL; los QUIERO del
+  // flujo del Método HÉROE se barren siempre que el bot esté encendido
+  // (la persona los pidió comentando). Roy 14-oct.
+  const invitacionGeneral = !!config?.comment_dm_enabled;
 
   // identidad propia: nunca invitarse a sí mismo
   const me = (await graphGet("/me?fields=id,username")) as { id: string; username: string };
@@ -80,7 +84,8 @@ export async function sweepInstagramComments() {
         raw: { origen: "barrida", comment: c },
       };
       if (esComentarioQuiero(comentario.text)) await handleComentarioQuiero(comentario);
-      else await handleInstagramComment(comentario);
+      else if (invitacionGeneral) await handleInstagramComment(comentario);
+      else continue; // invitación general apagada: solo QUIERO
       usuariosInvitados.add(c.from.id);
       enviados++;
 
