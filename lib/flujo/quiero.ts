@@ -58,6 +58,37 @@ export function esAfirmacionCorta(texto: string | null): boolean {
     || /^(si+|claro|va+)\s/.test(t);
 }
 
+// Vocabulario de cierre: si TODO el mensaje son palabras de estas (≤6), la
+// persona está cerrando la plática — no preguntando ni objetando.
+const PALABRAS_CIERRE = new Set([
+  "va", "vale", "ok", "okey", "oki", "sale", "dale", "listo", "listoo",
+  "gracias", "graciass", "grax", "muchas", "mil", "thanks", "ty",
+  "perfecto", "genial", "super", "buenisimo", "excelente", "chido", "padre",
+  "de", "nada", "igualmente", "claro", "aja", "sip", "si", "simon",
+  "al", "rato", "alrato", "lo", "veo", "checo", "reviso", "luego", "ahorita", "despues",
+  "ahi", "te", "aviso", "cuento", "digo", "nos", "vemos", "saludos", "bye", "adios",
+  "entendido", "enterado", "ntp", "oks", "tqm", "bendiciones", "igual", "roy",
+]);
+
+// Señal FUERTE de cierre: sin una de estas, un "va"/"si"/"ok" suelto se trata
+// como afirmación (puede estar contestando una pregunta del bot), no cierre.
+const CIERRE_FUERTE =
+  /\b(gracias+|grax|thanks|ty|bye|adios|saludos|bendiciones|nos vemos|al rato|alrato|luego lo (veo|checo|reviso)|ahorita lo (veo|checo|reviso)|despues lo (veo|checo|reviso)|ahi te (aviso|digo|cuento)|listo+)\b/;
+
+/**
+ * "va gracias", "ok luego lo veo", "listo 🙌" — la persona está CERRANDO.
+ * El bot NO debe contestar (regla de Roy 14-oct: "debes saber acabar la
+ * conversacion, el bot siempre quiere ser el ultimo mensaje y no").
+ */
+export function esCierreDePlatica(texto: string | null): boolean {
+  if (!texto || texto.length > 60 || texto.includes("?")) return false;
+  const t = normalizar(texto);
+  const palabras = t.split(" ").filter(Boolean);
+  if (palabras.length === 0) return true; // puro emoji = cierre
+  if (palabras.length > 6) return false;
+  return CIERRE_FUERTE.test(t) && palabras.every((p) => PALABRAS_CIERRE.has(p));
+}
+
 /** {nombre} -> nombre real; sin nombre, el marcador se quita limpio. */
 export function personalizarNombre(texto: string, nombre: string | null): string {
   if (nombre) return texto.replaceAll("{nombre}", nombre);
@@ -83,7 +114,7 @@ export async function playbookFlujoQuiero(): Promise<string> {
 Su interés YA existe (por eso comentó). NO investigues pains ni hagas plática de descubrimiento: tu único trabajo es llevarla por este embudo, en orden, un paso por respuesta. Usa estas frases como guía (adáptalas apenas lo necesario, mismo estilo):
 
 1. Ya se le ofreció el video con la mini clase. Si dice que sí (o algo parecido), tu respuesta ES mandar el video tal cual: "${frase("mandar-video")}". Sin preguntas antes, sin precio.
-2. Con el video ya mandado, el seguimiento es UNA pregunta a la vez: "${frase("ya-lo-viste")}" — y si ya lo vio: "${frase("que-te-parecio")}" — y cuando la plática fluya: "${frase("cierre")}".
+2. Recién mandado el video, si la persona solo agradece o cierra ("va gracias", "ok"), AHÍ TERMINA tu turno: responde únicamente [FIN]. El "ya pudiste ver el video?" NO lo mandas tú — lo manda el sistema solo, horas después. Tú solo sigues el seguimiento cuando la persona retome la plática: "${frase("que-te-parecio")}" — y cuando fluya: "${frase("cierre")}". UNA pregunta a la vez.
 3. Si dice que SÍ le interesa / lo quiere: "${frase("inscripcion")}". El link de compra SOLO en este paso.
 4. Si dice que NO PUEDE (dinero, tiempo, lo que sea): "${frase("entender")}". UN solo intento más — nunca dos.
 5. Si después de ese intento sigue en no, o de plano dice que no le interesa: "${frase("clase-gratis")}". Aquí el objetivo es que te dé su NOMBRE y su CORREO.

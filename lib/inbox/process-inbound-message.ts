@@ -152,6 +152,15 @@ export async function processInboundMessage(msg: InboundMessage) {
   });
   if (blockAiReply) return;
 
+  // SABER ACABAR LA PLÁTICA (Roy 14-oct): "el bot siempre quiere ser el
+  // último mensaje y no". Si la persona cierra ("va gracias", "ok luego lo
+  // veo", un 👍), el bot se queda CALLADO — el seguimiento sale horas
+  // después por el cron de insistidas, no al instante.
+  {
+    const { esCierreDePlatica } = await import("@/lib/flujo/quiero");
+    if (esCierreDePlatica(msg.content)) return;
+  }
+
   const category = await classifyMessage(conversation.id, msg.content);
   if (category === "emergencia") {
     await escalateConversation(conversation.id);

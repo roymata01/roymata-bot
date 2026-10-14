@@ -123,6 +123,68 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // ---------- FASE 1.5: seguimiento tras CIERRE del usuario (Roy 14-oct) ----------
+  // La persona cerró la plática ("va gracias") después de recibir el video y
+  // el bot se quedó callado (como debe). A las 5–16 h se retoma UNA vez con
+  // la línea contextual ("ya pudiste ver el video?" si aplica).
+  const cierres: string[] = [];
+  {
+    const hace5h = new Date(ahora - 5 * 3600_000).toISOString();
+    const hace16h = new Date(ahora - 16 * 3600_000).toISOString();
+    const { data: candidatas } = await supabase
+      .from("conversations")
+      .select("id, channel, contact_id, last_message_at, last_inbound_at, contacts(external_id, display_name)")
+      .eq("ai_enabled", true)
+      .not("last_inbound_at", "is", null)
+      .lt("last_inbound_at", hace5h)
+      .gt("last_inbound_at", hace16h)
+      .limit(200);
+
+    const { esCierreDePlatica } = await import("@/lib/flujo/quiero");
+    for (const conv of candidatas ?? []) {
+      if (cierres.length >= 10) break;
+      const lastIn = new Date(conv.last_inbound_at as string).getTime();
+      const lastMsg = new Date(conv.last_message_at as string).getTime();
+      if (lastMsg > lastIn) continue; // el bot ya dijo algo después — no aplica
+      if (conv.channel === "whatsapp" && ahora - lastIn > 22 * 3600_000) continue;
+
+      const contacto = conv.contacts as unknown as Contacto | null;
+      if (!contacto?.external_id) continue;
+
+      // El último mensaje debe ser un CIERRE del usuario, y antes de él un
+      // mensaje de la IA con el video/link (plática de venta activa).
+      const { data: ultimos } = await supabase
+        .from("messages")
+        .select("direction, sender_type, content")
+        .eq("conversation_id", conv.id)
+        .order("created_at", { ascending: false })
+        .limit(12);
+      const ultimo = ultimos?.[0];
+      if (!ultimo || ultimo.direction !== "in") continue;
+      if (!esCierreDePlatica(String(ultimo.content ?? ""))) continue;
+      const conVideo = (ultimos ?? []).some(
+        (m) => m.direction === "out" && /\/heroe/.test(String(m.content ?? ""))
+      );
+      if (!conVideo) continue;
+
+      // Si ya dio sus datos (rescate completado), la plática YA terminó bien:
+      // no se le vuelve a escribir.
+      const { data: enLista } = await supabase
+        .from("lista_espera_gen2")
+        .select("correo, telefono")
+        .eq("conversation_id", conv.id)
+        .maybeSingle();
+      if (enLista?.correo || enLista?.telefono) continue;
+
+      const linea = await lineaInsistida(conv.id);
+      if (!linea) continue;
+      if (await manda(conv as never, contacto.external_id, linea)) {
+        cierres.push(conv.id as string);
+      }
+      await espera(1500);
+    }
+  }
+
   // ---------- FASE 2: la línea (2–8 h después del grito, si sigue el silencio) ----------
   const lineas: string[] = [];
   {
@@ -210,5 +272,12 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ gritos: gritos.length, lineas: lineas.length, conv_gritos: gritos, conv_lineas: lineas });
+  return NextResponse.json({
+    gritos: gritos.length,
+    cierres: cierres.length,
+    lineas: lineas.length,
+    conv_gritos: gritos,
+    conv_cierres: cierres,
+    conv_lineas: lineas,
+  });
 }

@@ -95,7 +95,7 @@ export const FLUJO_QUIERO: FaseFlujo[] = [
                 tipo: "bot",
                 titulo: "Le manda el video",
                 texto: "va, aqui te va ||| cursos.vitarescue.com.mx/heroe ||| es una mini clase que grabe, ahi te explico todo",
-                nota: "el video ES la respuesta: ahi viene toda la info del curso y el precio. jamas se da el precio por chat",
+                nota: "el video ES la respuesta: ahi viene toda la info y el precio (jamas por chat). si contesta solo 'va gracias', el bot SE CALLA — nada de querer la ultima palabra",
               },
             ],
             destino: "sigue en Seguimiento del video",
@@ -146,7 +146,7 @@ export const FLUJO_QUIERO: FaseFlujo[] = [
           tipo: "bot",
           titulo: "Primer seguimiento",
           texto: "ya pudiste ver el video?",
-          nota: "unas 5 horas despues de mandar el link. una sola pregunta, sin bombardear",
+          nota: "lo manda el sistema SOLO, unas 5 horas despues de mandar el link (aunque la persona haya cerrado con un gracias). una sola pregunta, sin bombardear",
         },
       },
       {
@@ -255,7 +255,7 @@ export const FLUJO_QUIERO: FaseFlujo[] = [
           tipo: "fin",
           titulo: "Despedida",
           texto: "listo, te aviso ||| cualquier cosa aqui ando",
-          nota: "se cierra con buena vibra. la persona queda en la base y la platica queda abierta",
+          nota: "se cierra con buena vibra y AQUI TERMINA: si la persona contesta 'gracias' o similar, el bot ya no dice nada",
         },
       },
     ],
@@ -272,6 +272,7 @@ export const REGLAS_DE_ORO = [
   "solo escribe entre 9am y 10pm",
   "si sacan otro tema: un mensaje y de regreso al flujo",
   "una insistida a la vez, nunca dos preguntas juntas",
+  "saber ACABAR: si la persona cierra con un gracias/ok, el bot no contesta — jamas busca la ultima palabra",
 ];
 
 /** Aplica los textos editados por Roy encima de los default. */

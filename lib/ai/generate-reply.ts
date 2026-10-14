@@ -49,7 +49,8 @@ ${contactName ? `Su nombre/usuario es: ${contactName}.` : "No sabes su nombre to
 RECORDATORIO DURO (estas reglas van sobre TODO lo demas):
 1. PROHIBIDO preguntar "como estas", "que tal tu dia" o cualquier pregunta social. Si solo te saludan: UN mensaje amable y en ese MISMO turno canalizas al tema del curso.
 2. LEE TODO el historial antes de responder: si ya se hablo de primeros auxilios, de sus miedos o del curso en mensajes anteriores (aunque sean de otros dias), NO vuelvas a investigar NI hagas mas preguntas sobre su caso — en TU PRIMERA respuesta retomas su pain en una frase y le ofreces el video: ejemplo "oye, por lo que me contaste de tu papa te prepare algo: un video de como reaccionar en esos momentos, es una mini clase" ||| "https://cursos.vitarescue.com.mx/heroe". El video ES la respuesta, no otra pregunta.
-3. Todo en minusculas, sin acentos, sin signos de apertura. Mensajes de 1 linea (maximo 2): si un mensaje te sale de mas de ~15 palabras, recortalo o partelo con |||. Puedes dividir tu respuesta en 2 mensajes cortos separados por una línea que contenga solamente ||| — así se siente como chat real. Úsalo cuando quede natural, no siempre.${
+3. Todo en minusculas, sin acentos, sin signos de apertura. Mensajes de 1 linea (maximo 2): si un mensaje te sale de mas de ~15 palabras, recortalo o partelo con |||. Puedes dividir tu respuesta en 2 mensajes cortos separados por una línea que contenga solamente ||| — así se siente como chat real. Úsalo cuando quede natural, no siempre.
+4. SABER ACABAR: no busques tener la ultima palabra. Si la persona esta cerrando la platica (un gracias, un ok, un "luego lo veo", un emoji) y no hay pregunta pendiente que contestarle, responde UNICAMENTE con [FIN] — nada mas, sin despedida, sin "aqui ando". Una despedida ya dicha no se repite jamas.${
     conTypo
       ? seCorrige
         ? `
@@ -83,6 +84,21 @@ En ESTA respuesta: comete UNA pequeña falta de dedo en una palabra (letras camb
     .map((block) => (block as { text: string }).text)
     .join("\n")
     .trim();
+
+  // [FIN] = la IA decidió que lo correcto es NO contestar (la persona cerró
+  // la plática). No se guarda ni se manda nada.
+  if (/^\[?FIN\]?$/i.test(replyText.replace(/[[\]().\s]/g, "")) || replyText.includes("[FIN]")) {
+    const costFin = estimateCostUsd(settings.model, response.usage.input_tokens, response.usage.output_tokens);
+    await supabase.from("token_usage_logs").insert({
+      conversation_id: conversationId,
+      message_id: null,
+      model: settings.model,
+      input_tokens: response.usage.input_tokens,
+      output_tokens: response.usage.output_tokens,
+      cost_usd: costFin,
+    });
+    return { mensajes: [], replyText: "" };
+  }
 
   // la respuesta puede venir en varios mensajes separados por ||| (chat real);
   // un renglón vacío también corta — a veces el modelo separa así sus burbujas
