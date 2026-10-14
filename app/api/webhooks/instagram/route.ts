@@ -5,6 +5,8 @@ import { parseMessagingWebhook } from "@/lib/meta/parse-messaging-webhook";
 import { parseInstagramCommentWebhook } from "@/lib/meta/parse-comment-webhook";
 import { processInboundMessage } from "@/lib/inbox/process-inbound-message";
 import { handleInstagramComment } from "@/lib/inbox/handle-instagram-comment";
+import { handleComentarioQuiero } from "@/lib/inbox/handle-comentario-quiero";
+import { esComentarioQuiero } from "@/lib/flujo/quiero";
 
 // Las respuestas llevan pausas humanas (hasta ~20s entre burbujas), así que se
 // le responde 200 a Meta de inmediato y el trabajo sigue en segundo plano.
@@ -36,7 +38,10 @@ export async function POST(req: NextRequest) {
       for (const comment of comments) {
         // pausa humana antes de la invitación: nadie contesta un comentario en 2s
         await new Promise((r) => setTimeout(r, 8000 + Math.random() * 7000));
-        await handleInstagramComment(comment);
+        // "QUIERO" = entrada al flujo del Método HÉROE; lo demás sigue la
+        // invitación normal por comentario.
+        if (esComentarioQuiero(comment.text)) await handleComentarioQuiero(comment);
+        else await handleInstagramComment(comment);
       }
     } catch (error) {
       console.error("Error procesando mensaje de Instagram:", error);

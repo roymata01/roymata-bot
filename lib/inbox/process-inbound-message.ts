@@ -5,6 +5,7 @@ import { sendKeywordReplyIfMatch } from "@/lib/inbox/handle-keyword-reply";
 import { handleCampaignReply } from "@/lib/inbox/handle-campaign-reply";
 import { handleCotizacionWhatsApp } from "@/lib/inbox/handle-cotizacion-whatsapp";
 import { handleQuiero } from "@/lib/inbox/handle-quiero";
+import { manejarRespuestaFlujoQuiero } from "@/lib/inbox/handle-flujo-quiero-respuesta";
 import { checkEscalation } from "@/lib/ai/check-escalation";
 import { royFollowsInstagramUser } from "@/lib/meta/check-roy-follows";
 import { modoEventoHyroxActivo } from "@/lib/hyrox/config";
@@ -68,6 +69,12 @@ export async function processInboundMessage(msg: InboundMessage) {
 
   if (escalatedByKeyword) return;
 
+  // Cuenta de PRUEBA del propio Roy (7-oct): @rodrigo.mataa. El bot le contesta
+  // aunque Roy la siga, y también con el bot PAUSADO — es como Roy prueba el
+  // flujo QUIERO completo sin tocar a la audiencia real (14-oct).
+  const CUENTA_PRUEBA_ROY = "727816726707180"; // IG @rodrigo.mataa
+  const esCuentaPrueba = msg.channel === "instagram" && msg.externalId === CUENTA_PRUEBA_ROY;
+
   // APAGADOR TOTAL (Roy 12-oct): con is_paused, NINGÚN mensaje sale — ni la
   // IA ni los automáticos fijos (QUIERO, palabras clave, seguimiento de
   // comentario, campañas). El mensaje queda guardado y las alertas de
@@ -75,19 +82,16 @@ export async function processInboundMessage(msg: InboundMessage) {
   {
     const { data: ajustes } = await createAdminClient()
       .from("assistant_settings").select("is_paused").eq("id", 1).single();
-    if (ajustes?.is_paused) return;
+    if (ajustes?.is_paused && !esCuentaPrueba) return;
   }
 
   // Regla de Roy (2026-08-13): si Roy SIGUE a la persona en Instagram, es de su
   // círculo — el bot no se activa para nada (ni keyword, ni seguimiento, ni IA);
   // el mensaje solo queda guardado para que Roy conteste él. La escalación de
   // emergencias (arriba) sí corre incluso con amigos, por seguridad.
-  // Excepción: @rodrigo.mataa es la cuenta de PRUEBA del propio Roy (7-oct) —
-  // ahí el bot sí contesta aunque Roy la siga, para poder probarse a sí mismo.
-  const CUENTA_PRUEBA_ROY = "727816726707180"; // IG @rodrigo.mataa
   if (
     msg.channel === "instagram" &&
-    msg.externalId !== CUENTA_PRUEBA_ROY &&
+    !esCuentaPrueba &&
     (await royFollowsInstagramUser(msg.externalId))
   ) return;
 
@@ -109,11 +113,24 @@ export async function processInboundMessage(msg: InboundMessage) {
   );
   if (cotizacionEnviada) return;
 
-  // "QUIERO" (CTA del video del Instituto VITA) -> respuesta determinista:
-  // aparta lugar en lista_espera_gen2 y pide contacto OBLIGATORIO; los
-  // datos que lleguen después los completa capture-lista-espera.
-  const quiso = await handleQuiero(conversation.id, contact.id, msg.channel, msg.externalId, msg.content);
-  if (quiso) return;
+  // FLUJO QUIERO del Método HÉROE (14-oct): quien entró por el comentario
+  // QUIERO trae la etiqueta del flujo — su "si" corto al ofrecimiento manda
+  // el VIDEO determinista (sin dejar que la IA improvise); lo demás lo lleva
+  // la IA con el playbook del flujo. A estos contactos NO les aplica el
+  // handleQuiero viejo (ese es del CTA de la Gen 2).
+  const enFlujoQuiero = (contact.tags ?? []).includes("flujo-quiero");
+  if (enFlujoQuiero) {
+    const videoEnviado = await manejarRespuestaFlujoQuiero(
+      conversation.id, contact.id, msg.channel, msg.externalId, msg.content
+    );
+    if (videoEnviado) return;
+  } else {
+    // "QUIERO" (CTA del video del Instituto VITA) -> respuesta determinista:
+    // aparta lugar en lista_espera_gen2 y pide contacto OBLIGATORIO; los
+    // datos que lleguen después los completa capture-lista-espera.
+    const quiso = await handleQuiero(conversation.id, contact.id, msg.channel, msg.externalId, msg.content);
+    if (quiso) return;
+  }
 
   // Palabra clave ("responde CURSO a esta historia") -> link de registro,
   // determinista. Va antes del seguimiento: si responden "curso" a la
@@ -165,9 +182,10 @@ export async function processInboundMessage(msg: InboundMessage) {
   // Nunca lanza — un fallo aquí no frena la respuesta.
   await maybeCaptureQuoteRequest(conversation.id, contact.id, msg.content);
 
-  // Lista de espera Generación 2 del Instituto (abre en diciembre): captura
-  // a quien quiere inscribirse para sí mismo. Igual: nunca lanza.
-  await maybeCaptureListaEspera(conversation.id, contact.id, msg.channel, msg.content);
+  // Lista de espera / base de interesados: captura a quien quiere inscribirse
+  // o aceptó que le avisen de la clase gratis. En el flujo QUIERO corre
+  // SIEMPRE (el rescate del dato pide nombre+correo). Igual: nunca lanza.
+  await maybeCaptureListaEspera(conversation.id, contact.id, msg.channel, msg.content, enFlujoQuiero);
 
   // Si quiere CERRAR (confirmar, agendar, pagar, que Roy le llame), alerta al
   // WhatsApp personal de Roy — la IA no puede prometer "Roy te contacta" sin
@@ -180,7 +198,9 @@ export async function processInboundMessage(msg: InboundMessage) {
     .select("is_paused")
     .eq("id", 1)
     .single();
-  if (settings?.is_paused) return; // apagado de emergencia: guarda el mensaje, no genera ni envía respuesta
+  // apagado de emergencia: guarda el mensaje, no genera ni envía respuesta
+  // (la cuenta de prueba de Roy sí pasa, para probar el flujo en pausa)
+  if (settings?.is_paused && !esCuentaPrueba) return;
 
   const { mensajes, replyText } = await generateAiReply(conversation.id, msg.channel, contact.id);
   if (!replyText || mensajes.length === 0) return;

@@ -21,12 +21,18 @@ export async function generateAiReply(conversationId: string, channel: Channel, 
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: false })
       .limit(HISTORY_LIMIT),
-    supabase.from("contacts").select("display_name, phone").eq("id", contactId).single(),
+    supabase.from("contacts").select("display_name, phone, tags").eq("id", contactId).single(),
   ]);
   if (settingsError) throw settingsError;
   if (historyError) throw historyError;
 
-  const knowledgeBasePrompt = await buildSystemPrompt();
+  let knowledgeBasePrompt = await buildSystemPrompt();
+  // Flujo QUIERO (14-oct): quien entró por el comentario QUIERO trae su propio
+  // playbook — los textos que Roy edita en /flujo mandan sobre la plática libre.
+  if (((contact?.tags as string[] | null) ?? []).includes("flujo-quiero")) {
+    const { playbookFlujoQuiero } = await import("@/lib/flujo/quiero");
+    knowledgeBasePrompt += await playbookFlujoQuiero();
+  }
   const contactName = contact?.display_name || contact?.phone || null;
   // toque humano (idea de Roy, subido 2026-10-07): ~1 de cada 3 respuestas trae
   // una falta de dedo — controlado por código para que la frecuencia sea real y

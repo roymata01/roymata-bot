@@ -24,7 +24,10 @@ export async function maybeCaptureListaEspera(
   conversationId: string,
   contactId: string,
   channel: string,
-  lastMessage: string | null
+  lastMessage: string | null,
+  // Flujo QUIERO: el rescate del dato pide nombre+correo para avisar de la
+  // clase gratis — ahí el extractor corre siempre, sin esperar la señal.
+  forzar = false
 ) {
   try {
     const supabase = createAdminClient();
@@ -35,7 +38,7 @@ export async function maybeCaptureListaEspera(
       .eq("conversation_id", conversationId)
       .maybeSingle();
 
-    if (!existing && !GEN2_HINT.test(lastMessage ?? "")) return;
+    if (!existing && !forzar && !GEN2_HINT.test(lastMessage ?? "")) return;
     // Ya capturado con correo o teléfono: no hay nada más que completar
     if (existing?.correo || existing?.telefono) return;
 
@@ -58,7 +61,7 @@ export async function maybeCaptureListaEspera(
       max_tokens: 250,
       system: `Analiza esta conversación de redes sociales de Roy Mata (paramédico, cursos de primeros auxilios).
 
-¿La persona mostró interés en INSCRIBIRSE al Instituto VITA / al curso en línea de Roy PARA SÍ MISMA (o aceptó que la apunten a la lista de espera de la Generación 2 que abre en diciembre)? Un curso para su empresa/escuela NO cuenta (eso es cotización).
+¿La persona mostró interés en INSCRIBIRSE al Instituto VITA / al curso en línea de Roy PARA SÍ MISMA, aceptó que la apunten a la lista de espera de la Generación 2, o aceptó que le AVISEN de la próxima clase gratis en vivo (dando o por dar sus datos)? Un curso para su empresa/escuela NO cuenta (eso es cotización).
 
 Responde ÚNICAMENTE con JSON válido, sin texto extra:
 {"quiere_lista": true/false, "nombre": "nombre de la persona o null", "correo": "... o null", "telefono": "... o null", "notas": "resumen de 1 línea de su interés o null"}

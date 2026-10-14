@@ -1,5 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { handleInstagramComment } from "@/lib/inbox/handle-instagram-comment";
+import { handleComentarioQuiero } from "@/lib/inbox/handle-comentario-quiero";
+import { esComentarioQuiero } from "@/lib/flujo/quiero";
 
 const GRAPH = "https://graph.instagram.com/v23.0";
 
@@ -67,14 +69,18 @@ export async function sweepInstagramComments() {
       if (c.from.id === me.id || c.from.username === me.username) continue;
       if (comentariosVistos.has(c.id) || usuariosInvitados.has(c.from.id)) continue;
 
-      await handleInstagramComment({
+      // Los QUIERO van al flujo del Método HÉROE, igual que en el webhook
+      // (la barrida rescata sobre todo cuentas privadas, que no avisan).
+      const comentario = {
         commentId: c.id,
         mediaId: m.id,
         userId: c.from.id,
         username: c.from.username ?? null,
         text: c.text ?? null,
         raw: { origen: "barrida", comment: c },
-      });
+      };
+      if (esComentarioQuiero(comentario.text)) await handleComentarioQuiero(comentario);
+      else await handleInstagramComment(comentario);
       usuariosInvitados.add(c.from.id);
       enviados++;
 
