@@ -16,29 +16,44 @@ export async function POST(req: NextRequest) {
   if (!token) return NextResponse.json({ error: "TikTok no está conectado" }, { status: 400 });
 
   try {
-    const titulo = ((await req.json().catch(() => ({})))?.titulo as string) || "Video de prueba VITA RESCUE 🚑";
+    const cuerpo = (await req.json().catch(() => ({}))) as { titulo?: string; modo?: string };
+    const titulo = cuerpo?.titulo || "Video de prueba VITA RESCUE 🚑";
+    // "borrador" = Upload to TikTok (el video llega a la bandeja del creador y
+    // él lo publica desde la app) — funciona SIN auditoría en cuentas públicas.
+    // "directo" = Direct Post — hasta que TikTok audite la app, solo funciona
+    // en cuentas PRIVADAS (error unaudited_client_can_only_post_to_private_accounts).
+    const modo = cuerpo?.modo === "directo" ? "directo" : "borrador";
     const video = await readFile(path.join(process.cwd(), "public", "tiktok-demo.mp4"));
 
+    const sourceInfo = {
+      source: "FILE_UPLOAD",
+      video_size: video.byteLength,
+      chunk_size: video.byteLength,
+      total_chunk_count: 1,
+    };
+
     // 1. init: declara el video y pide la URL de subida
-    const init = await fetch(`${API}/post/publish/video/init/`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token.access_token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        post_info: {
-          title: titulo,
-          privacy_level: "SELF_ONLY",
-          disable_comment: false,
-          disable_duet: true,
-          disable_stitch: true,
-        },
-        source_info: {
-          source: "FILE_UPLOAD",
-          video_size: video.byteLength,
-          chunk_size: video.byteLength,
-          total_chunk_count: 1,
-        },
-      }),
-    });
+    const init = await fetch(
+      modo === "directo" ? `${API}/post/publish/video/init/` : `${API}/post/publish/inbox/video/init/`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token.access_token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(
+          modo === "directo"
+            ? {
+                post_info: {
+                  title: titulo,
+                  privacy_level: "SELF_ONLY",
+                  disable_comment: false,
+                  disable_duet: true,
+                  disable_stitch: true,
+                },
+                source_info: sourceInfo,
+              }
+            : { source_info: sourceInfo }
+        ),
+      }
+    );
     const initData = await init.json();
     if (!init.ok || initData?.error?.code !== "ok") {
       console.error("TikTok init:", initData);
@@ -74,7 +89,7 @@ export async function POST(req: NextRequest) {
       if (s === "PUBLISH_COMPLETE" || s === "FAILED") break;
     }
 
-    return NextResponse.json({ ok: true, publishId, estado });
+    return NextResponse.json({ ok: true, modo, publishId, estado });
   } catch (e) {
     console.error("TikTok publicar:", e);
     return NextResponse.json({ error: String(e) }, { status: 500 });
