@@ -30,7 +30,10 @@ function horaCdmx(): number {
   );
 }
 
-type Contacto = { external_id: string; display_name: string | null };
+type Contacto = { external_id: string; display_name: string | null; tags?: string[] | null };
+
+// Quien ya compró el Método HÉROE no recibe NINGUNA insistida más.
+const esAlumnoHeroe = (c: Contacto | null) => (c?.tags ?? []).includes("heroe-alumno");
 
 export async function GET(req: NextRequest) {
   const auth = req.headers.get("authorization");
@@ -78,7 +81,7 @@ export async function GET(req: NextRequest) {
     const hace16h = new Date(ahora - 16 * 3600_000).toISOString();
     const { data: candidatas } = await supabase
       .from("conversations")
-      .select("id, channel, contact_id, last_message_at, last_inbound_at, contacts(external_id, display_name)")
+      .select("id, channel, contact_id, last_message_at, last_inbound_at, contacts(external_id, display_name, tags)")
       .eq("ai_enabled", true)
       .not("last_inbound_at", "is", null)
       .lt("last_message_at", hace5h)
@@ -94,6 +97,7 @@ export async function GET(req: NextRequest) {
 
       const contacto = conv.contacts as unknown as Contacto | null;
       if (!contacto?.external_id) continue;
+      if (esAlumnoHeroe(contacto)) continue; // ya compró: cero presión
 
       const { data: salientes } = await supabase
         .from("messages")
@@ -133,7 +137,7 @@ export async function GET(req: NextRequest) {
     const hace16h = new Date(ahora - 16 * 3600_000).toISOString();
     const { data: candidatas } = await supabase
       .from("conversations")
-      .select("id, channel, contact_id, last_message_at, last_inbound_at, contacts(external_id, display_name)")
+      .select("id, channel, contact_id, last_message_at, last_inbound_at, contacts(external_id, display_name, tags)")
       .eq("ai_enabled", true)
       .not("last_inbound_at", "is", null)
       .lt("last_inbound_at", hace5h)
@@ -150,6 +154,7 @@ export async function GET(req: NextRequest) {
 
       const contacto = conv.contacts as unknown as Contacto | null;
       if (!contacto?.external_id) continue;
+      if (esAlumnoHeroe(contacto)) continue; // ya compró: cero presión
 
       // El último mensaje debe ser un CIERRE del usuario, y antes de él un
       // mensaje de la IA con el video/link (plática de venta activa).
@@ -192,7 +197,7 @@ export async function GET(req: NextRequest) {
     const hace8h = new Date(ahora - 8 * 3600_000).toISOString();
     const { data: candidatas } = await supabase
       .from("conversations")
-      .select("id, channel, contact_id, last_message_at, last_inbound_at, contacts(external_id, display_name)")
+      .select("id, channel, contact_id, last_message_at, last_inbound_at, contacts(external_id, display_name, tags)")
       .eq("ai_enabled", true)
       .not("last_inbound_at", "is", null)
       .lt("last_message_at", hace2h)
@@ -208,6 +213,7 @@ export async function GET(req: NextRequest) {
 
       const contacto = conv.contacts as unknown as Contacto | null;
       if (!contacto?.external_id) continue;
+      if (esAlumnoHeroe(contacto)) continue; // ya compró: cero presión
 
       // el último mensaje debe ser EL GRITO (de la IA), sin línea después
       const { data: ultimos } = await supabase

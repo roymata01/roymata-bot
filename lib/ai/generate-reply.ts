@@ -29,7 +29,14 @@ export async function generateAiReply(conversationId: string, channel: Channel, 
   let knowledgeBasePrompt = await buildSystemPrompt();
   // Flujo QUIERO (14-oct): quien entró por el comentario QUIERO trae su propio
   // playbook — los textos que Roy edita en /flujo mandan sobre la plática libre.
-  if (((contact?.tags as string[] | null) ?? []).includes("flujo-quiero")) {
+  const tagsContacto = (contact?.tags as string[] | null) ?? [];
+  if (tagsContacto.includes("heroe-alumno")) {
+    // Ya compró: cero venta, cero links de compra — puro soporte.
+    knowledgeBasePrompt += `
+
+## ESTA PERSONA YA ES ALUMNA DEL MÉTODO HÉROE
+Ya compró el curso. PROHIBIDO venderle, presionarla o mandarle links de compra. Tu único papel: resolver dudas de acceso/portal, celebrar sus avances y buena vibra. Si tiene broncas con su acceso que no puedas resolver, dile que Roy lo checa personalmente.`;
+  } else if (tagsContacto.includes("flujo-quiero")) {
     const { playbookFlujoQuiero } = await import("@/lib/flujo/quiero");
     knowledgeBasePrompt += await playbookFlujoQuiero();
   }

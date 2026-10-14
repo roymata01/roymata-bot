@@ -197,8 +197,15 @@ export const FLUJO_QUIERO: FaseFlujo[] = [
                 texto: "va! aqui te dejo tu acceso ||| cursos.vitarescue.com.mx/heroe/comprar ||| cualquier cosa con tu inscripcion me dices",
                 nota: "el link de compra SOLO cuando ya dijo que lo quiere. si se traba o duda: recordarle la garantia de 7 dias",
               },
+              {
+                id: "felicitacion",
+                tipo: "bot",
+                titulo: "Cuando se detecta su compra",
+                texto: "yaaa vi tu inscripcion {nombre}! bienvenido al metodo heroe 🙌 ||| checa tu correo, ahi esta tu acceso. empieza con el modulo 1 y cualquier duda aqui ando",
+                nota: "la manda el sistema solo al detectar la compra (cruza el correo de la platica con los alumnos). desde ese momento se apaga TODA la presion con esa persona",
+              },
             ],
-            destino: "compra → bienvenida y acceso automaticos",
+            destino: "compra detectada → felicitación + fin de la presión",
           },
           {
             id: "objecion",

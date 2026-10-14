@@ -35,6 +35,10 @@
     {
       "path": "/api/cron/insistir-platicas",
       "schedule": "30 * * * *"
+    },
+    {
+      "path": "/api/cron/detectar-compras-heroe",
+      "schedule": "10,40 * * * *"
     }
   ]
 }
