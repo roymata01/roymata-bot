@@ -206,7 +206,12 @@ export async function processInboundMessage(msg: InboundMessage) {
       // Gen 2 — "sería mi primera vez" suena personal pero ES la plática.
       supabaseExcepcion.from("lista_espera_gen2").select("id").eq("conversation_id", conversation.id).limit(1),
     ]);
-    if (!abiertaPorBot?.length && !enLista?.length) return;
+    if (!abiertaPorBot?.length && !enLista?.length && !enFlujoQuiero) return;
+    // "Solo lo importante" (Roy 14-oct): aunque la plática la haya abierto el
+    // bot, lo personal solo pasa si trae algo del EMBUDO (pains, dudas,
+    // objeciones, datos). Coqueteos, chistes y temas ajenos = silencio.
+    const { esRelevanteAlEmbudo } = await import("@/lib/ai/es-relevante-embudo");
+    if (!(await esRelevanteAlEmbudo(conversation.id, msg.content))) return;
   }
 
   // Cotizaciones grupales (empresa/escuela): detecta y junta los datos del
