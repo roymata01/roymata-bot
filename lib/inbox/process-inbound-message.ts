@@ -89,19 +89,36 @@ export async function processInboundMessage(msg: InboundMessage) {
   // círculo — el bot no se activa para nada (ni keyword, ni seguimiento, ni IA);
   // el mensaje solo queda guardado para que Roy conteste él. La escalación de
   // emergencias (arriba) sí corre incluso con amigos, por seguridad.
-  // EXCEPCIÓN (14-oct): quien entró al flujo QUIERO lo pidió comentando — el
-  // bot sí le sigue la plática aunque Roy lo siga.
+  // MATIZ del flujo QUIERO (caso Montse, 14-oct): a un amigo que comentó
+  // QUIERO el bot SÍ le manda el video si contesta "si" (paso determinista,
+  // más abajo) — pero JAMÁS le platica con la IA: sus chats son personales
+  // y los contesta Roy.
   const enFlujoQuiero = (contact.tags ?? []).includes("flujo-quiero");
-  if (
+  const esSeguidoPorRoy =
     msg.channel === "instagram" &&
     !esCuentaPrueba &&
-    !enFlujoQuiero &&
-    (await royFollowsInstagramUser(msg.externalId))
-  ) return;
+    (await royFollowsInstagramUser(msg.externalId));
+  if (esSeguidoPorRoy && !enFlujoQuiero) return;
 
   // Pausa humana antes de cualquier respuesta automática: nadie contesta en 1
   // segundo. La escalación de emergencias ya corrió (esa sí es instantánea).
   await new Promise((r) => setTimeout(r, 8000 + Math.random() * 7000));
+
+  // COALESCING (Roy 14-oct: "contesta como 2 veces lo mismo, o mensajes
+  // retrasados"): si la persona manda varios mensajes seguidos, cada webhook
+  // abre su propio run en paralelo. Solo el run del mensaje MÁS RECIENTE
+  // contesta (con todo el contexto); los demás se descartan aquí.
+  const llegoOtroMensaje = async (): Promise<boolean> => {
+    const { data } = await createAdminClient()
+      .from("messages")
+      .select("id")
+      .eq("conversation_id", conversation.id)
+      .eq("direction", "in")
+      .gt("created_at", message.created_at as string)
+      .limit(1);
+    return !!data?.length;
+  };
+  if (await llegoOtroMensaje()) return;
 
   // "gracias"/"enterado" al recordatorio de campaña de WhatsApp -> siembra la
   // semilla del certificado (sin precios) y abre la puerta para el día de clase.
@@ -127,6 +144,9 @@ export async function processInboundMessage(msg: InboundMessage) {
       conversation.id, contact.id, msg.channel, msg.externalId, msg.content
     );
     if (videoEnviado) return;
+    // Amigos de Roy: hasta aquí llega el bot — el video si dijeron "si", y
+    // todo lo demás lo contesta Roy en persona.
+    if (esSeguidoPorRoy) return;
   } else {
     // "QUIERO" (CTA del video del Instituto VITA) -> respuesta determinista:
     // aparta lugar en lista_espera_gen2 y pide contacto OBLIGATORIO; los
@@ -219,6 +239,13 @@ export async function processInboundMessage(msg: InboundMessage) {
 
   const supabase = createAdminClient();
 
+  // Generar la respuesta tomó segundos: si mientras tanto la persona volvió a
+  // escribir, esta respuesta ya nació vieja — se tira y contesta el run nuevo.
+  if (await llegoOtroMensaje()) {
+    await supabase.from("messages").delete().in("id", mensajes.map((m) => m.messageId));
+    return;
+  }
+
   // MODO PRUEBA DE AUDIOS (Roy, 1-oct-2026): solo contactos con la etiqueta
   // "audio_prueba" (las cuentas del propio Roy). Cada 5.º mensaje suyo, la
   // respuesta sale como nota de voz con su clon en vez de texto — para
@@ -248,6 +275,12 @@ export async function processInboundMessage(msg: InboundMessage) {
     }
   }
   for (const [i, mensaje] of mensajes.entries()) {
+    // Si la persona escribió durante la pausa entre burbujas, las burbujas
+    // restantes se tiran — el run nuevo contesta con el contexto completo.
+    if (i > 0 && (await llegoOtroMensaje())) {
+      await supabase.from("messages").delete().in("id", mensajes.slice(i).map((m) => m.messageId));
+      break;
+    }
     // Burbuja-marcador "[AUDIO:curso]" = mandar la nota de voz REAL de Roy
     const { markerAudio, enviarAudioPregrabado, AUDIOS_ROY } = await import("@/lib/voz/audios-pregrabados");
     const audioKey = markerAudio(mensaje.text);
