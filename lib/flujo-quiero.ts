@@ -87,8 +87,8 @@ export const FLUJO_QUIERO: FaseFlujo[] = [
           tipo: "bot",
           titulo: "Respuesta pública al comentario (una al azar)",
           texto:
-            "listo, ya te lo mande por mensaje 📩 ||| ya te escribi por dm, checa tus mensajes ||| te lo acabo de mandar al chat 🙌 ||| revisa tus mensajes, ya te lo envie ||| ya lo tienes en tus dm 👀 ||| listo! checa tus mensajes ||| te lo mande por privado, no se te vaya a solicitudes ||| ya quedo, te escribi por dm 💪 ||| checa el chat, ahi te lo deje ||| enviado 📩 revisa tus mensajes",
-          nota: "justo despues de mandar el dm, el bot contesta el comentario en publico con UNA de estas (al azar) — para que los demas vean que comentar funciona. cada burbuja es una version, agrega o quita las que quieras",
+            "listo {nombre}, ya te lo mande por mensaje 📩 ||| ya te escribi por dm {nombre}, checa tus mensajes ||| te lo acabo de mandar al chat {nombre} 🙌 ||| revisa tus mensajes {nombre}, ya te lo envie ||| ya lo tienes en tus dm {nombre} 👀 ||| listo {nombre}! checa tus mensajes ||| {nombre} te lo mande por privado, no se te vaya a solicitudes ||| ya quedo {nombre}, te escribi por dm 💪 ||| checa el chat {nombre}, ahi te lo deje ||| enviado {nombre} 📩 revisa tus mensajes",
+          nota: "justo despues de mandar el dm, el bot contesta el comentario en publico con UNA de estas (al azar). {nombre} se cambia por el nombre real sacado del @usuario; si no se le encuentra nombre, sale limpio sin nombre. cada burbuja es una version, agrega o quita las que quieras",
         },
       },
       {

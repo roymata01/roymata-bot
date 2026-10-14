@@ -72,7 +72,7 @@ export async function handleComentarioQuiero(comment: InstagramComment) {
     // una versión al azar de las 10 editables en /flujo — los demás ven que
     // comentar QUIERO funciona. Si falla, el DM ya salió: no se relanza.
     try {
-      const versiones = await burbujasDeNodo("reply-publico");
+      const versiones = await burbujasDeNodo("reply-publico", nombre);
       if (versiones.length > 0) {
         await new Promise((r) => setTimeout(r, 3000 + Math.random() * 4000));
         await replyToInstagramComment(comment.commentId, versiones[Math.floor(Math.random() * versiones.length)]);
