@@ -4,7 +4,7 @@ import { sendInviteFollowUpIfFirstReply } from "@/lib/inbox/send-invite-follow-u
 import { sendKeywordReplyIfMatch } from "@/lib/inbox/handle-keyword-reply";
 import { handleCampaignReply } from "@/lib/inbox/handle-campaign-reply";
 import { handleCotizacionWhatsApp } from "@/lib/inbox/handle-cotizacion-whatsapp";
-import { handleQuiero } from "@/lib/inbox/handle-quiero";
+import { handleQuieroDm } from "@/lib/inbox/handle-quiero-dm";
 import { manejarRespuestaFlujoQuiero } from "@/lib/inbox/handle-flujo-quiero-respuesta";
 import { checkEscalation } from "@/lib/ai/check-escalation";
 import { royFollowsInstagramUser } from "@/lib/meta/check-roy-follows";
@@ -153,10 +153,10 @@ export async function processInboundMessage(msg: InboundMessage) {
     // todo lo demás lo contesta Roy en persona.
     if (esSeguidoPorRoy) return;
   } else {
-    // "QUIERO" (CTA del video del Instituto VITA) -> respuesta determinista:
-    // aparta lugar en lista_espera_gen2 y pide contacto OBLIGATORIO; los
-    // datos que lleguen después los completa capture-lista-espera.
-    const quiso = await handleQuiero(conversation.id, contact.id, msg.channel, msg.externalId, msg.content);
+    // "QUIERO" por mensaje directo (CTA del video del Método HÉROE) -> entra
+    // al flujo: video de una vez + etiqueta. Reemplaza al handler viejo de
+    // la Gen 2 (handleQuiero), que queda fuera del pipeline.
+    const quiso = await handleQuieroDm(conversation.id, contact.id, msg.channel, msg.externalId, msg.content);
     if (quiso) return;
   }
 
