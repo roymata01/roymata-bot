@@ -57,18 +57,41 @@ export default function InboxPage() {
     }
   }, []);
 
+  // OJO: PostgREST corta TODA consulta en 1,000 filas. Con 7,000+
+  // conversaciones, pedir "todas" dejaba fuera a WhatsApp completo (las de
+  // campañas son viejas y el orden es por actividad). Por eso el filtro de
+  // red consulta al SERVIDOR: siempre llegan las 1,000 más recientes DE ESA
+  // red, no las sobras del global. (Bug cazado 17-oct con el filtro de WA.)
   const loadConversations = useCallback(async () => {
-    const { data } = await supabase
+    let query = supabase
       .from("conversations")
       .select("*, contact:contacts(*)")
-      .order("last_message_at", { ascending: false });
-    setConversations((data as ConversationWithContact[]) ?? []);
-  }, [supabase]);
+      .order("last_message_at", { ascending: false })
+      .limit(1000);
+    if (channelFilter !== "all") query = query.eq("channel", channelFilter);
+    const { data } = await query;
+    const convs = (data as ConversationWithContact[]) ?? [];
+    setConversations(convs);
+
+    // Negocio/Personal: marcar cuáles de las cargadas tienen mensajes de la
+    // IA — en tandas chicas para no chocar con el corte de 1,000.
+    const ids = convs.map((c) => c.id);
+    const respondidas = new Set<string>();
+    for (let i = 0; i < ids.length; i += 75) {
+      const { data: ms } = await supabase
+        .from("messages")
+        .select("conversation_id")
+        .eq("sender_type", "ai")
+        .in("conversation_id", ids.slice(i, i + 75))
+        .limit(1000);
+      for (const m of ms ?? []) respondidas.add(m.conversation_id as string);
+    }
+    setAnsweredConversationIds(respondidas);
+  }, [supabase, channelFilter]);
 
   const loadAnsweredConversationIds = useCallback(async () => {
-    const { data } = await supabase.from("messages").select("conversation_id").eq("sender_type", "ai");
-    setAnsweredConversationIds(new Set((data ?? []).map((m) => m.conversation_id as string)));
-  }, [supabase]);
+    // absorbida por loadConversations (clasifica solo lo cargado)
+  }, []);
 
   // El dinero a la vista: folio y monto de la cotización de cada conversación
   const loadCotizaciones = useCallback(async () => {
@@ -128,7 +151,7 @@ export default function InboxPage() {
       supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [supabase, selectedId]);
+  }, [supabase, selectedId, channelFilter]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- carga mensajes al cambiar de conversación
