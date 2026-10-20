@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   }
 
-  const { quote_request_id, dirigida, num_personas, precio_unitario, viaticos, instructor_roy, extra_descripcion, extra_monto } =
+  const { quote_request_id, dirigida, num_personas, precio_unitario, viaticos, instructor_roy, extra_descripcion, extra_monto, curso } =
     await req.json().catch(() => ({}));
 
   const personas = Number(num_personas);
@@ -69,6 +69,7 @@ export async function POST(req: NextRequest) {
     instructorRoy: conInstructor,
     extraDescripcion: extraDesc || undefined,
     extraMonto: extraDesc ? extraNum : 0,
+    curso: curso === "rcp-dea" ? "rcp-dea" : undefined,
   });
 
   let pdf: Buffer;

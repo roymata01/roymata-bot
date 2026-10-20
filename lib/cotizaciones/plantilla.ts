@@ -14,6 +14,7 @@ export type DatosCotizacion = {
   instructorRoy?: boolean; // regla de Roy: si imparte él, +$5,000 fijos
   extraDescripcion?: string; // especificación adicional libre (opcional)
   extraMonto?: number;
+  curso?: CursoCotizable; // default: basico
 };
 
 export const CARGO_INSTRUCTOR_ROY = 5000;
@@ -41,6 +42,35 @@ const CURSO_BASICO = {
   ],
   duracion: "5 horas.",
 };
+
+const CURSO_RCP_DEA = {
+  descripcionTabla: "Curso de RCP y uso del DEA",
+  nombre: "RCP Y USO DEL DEA (SOPORTE VITAL BÁSICO)",
+  objetivo:
+    "Reconocer de forma oportuna el paro cardiorrespiratorio y actuar en los primeros minutos con RCP de alta calidad y el uso del desfibrilador externo automático (DEA), dentro de un escenario seguro, activando de forma oportuna los apoyos de emergencia necesarios.",
+  temario: [
+    "Cadena De Supervivencia",
+    "Activación Del Sistema De Emergencias",
+    "Evaluación De La Escena Y Del Paciente",
+    "Inconsciencia Vs Paro Cardiaco",
+    "RCP De Alta Calidad En Adulto",
+    "RCP En Niño Y Lactante",
+    "Ventilación De Rescate",
+    "Uso Del DEA Paso A Paso",
+    "Atragantamiento (OVACE)",
+    "Posición De Recuperación",
+    "Práctica Con Maniquíes Y DEA De Entrenamiento",
+  ],
+  duracion: "3 horas.",
+};
+
+// Catálogo de cursos cotizables (los 8 restantes se activan igual: se agrega
+// su objeto aquí y su llave ya funciona en /api/cotizaciones/generar).
+export const CURSOS = {
+  basico: CURSO_BASICO,
+  "rcp-dea": CURSO_RCP_DEA,
+} as const;
+export type CursoCotizable = keyof typeof CURSOS;
 
 export function descuentoPorGrupo(personas: number): number {
   if (personas >= 61) return 20;
@@ -74,7 +104,7 @@ function fechaLarga(f: Date): string {
 }
 
 export function htmlCotizacion(d: DatosCotizacion): string {
-  const curso = CURSO_BASICO;
+  const curso = CURSOS[d.curso ?? "basico"];
   const { pct, descuento, total } = calcularTotales(d);
   const vence = new Date(d.fecha.getTime() + 30 * 86400000);
 
