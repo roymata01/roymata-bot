@@ -19,6 +19,7 @@ import { escalateConversation } from "@/lib/ai/escalate-conversation";
 import { generateAiReply } from "@/lib/ai/generate-reply";
 import { sendForChannel } from "@/lib/meta/send-message";
 import { runWorkflows } from "@/lib/workflows/run-workflows";
+import { paramedicoCobertura, manejarRespuestaCobertura } from "@/lib/inbox/handle-cobertura";
 import type { InboundMessage } from "@/lib/meta/types";
 
 export async function processInboundMessage(msg: InboundMessage) {
@@ -30,6 +31,21 @@ export async function processInboundMessage(msg: InboundMessage) {
   if (msg.isEcho) return;
 
   const { contact, conversation, message } = ingested;
+
+  // CONVOCATORIA DE COBERTURA (28-oct): si responde uno de los paramédicos
+  // convocados, aviso inmediato a Roy y la IA fuera — va ANTES del candado
+  // de ai_enabled para que TODOS sus mensajes avisen, no solo el primero.
+  if (msg.channel === "whatsapp") {
+    const paramedico = await paramedicoCobertura(msg.externalId);
+    if (paramedico) {
+      await manejarRespuestaCobertura({
+        conversationId: conversation.id,
+        nombre: paramedico,
+        texto: msg.content ?? "(mensaje sin texto: foto, audio o sticker)",
+      });
+      return;
+    }
+  }
 
   if (conversation.status !== "con_ia" || !conversation.ai_enabled) return;
 
