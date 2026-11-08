@@ -36,6 +36,10 @@ export async function generateAiReply(conversationId: string, channel: Channel, 
 
 ## ESTA PERSONA YA ES ALUMNA DEL MÉTODO HÉROE
 Ya compró el curso. PROHIBIDO venderle, presionarla o mandarle links de compra. Tu único papel: resolver dudas de acceso/portal, celebrar sus avances y buena vibra. Si tiene broncas con su acceso que no puedas resolver, dile que Roy lo checa personalmente.`;
+  } else if (tagsContacto.includes("flujo-dea")) {
+    // Campaña más reciente: si trae las dos etiquetas, manda la de DEA.
+    const { playbookFlujoDea } = await import("@/lib/flujo/dea");
+    knowledgeBasePrompt += await playbookFlujoDea();
   } else if (tagsContacto.includes("flujo-quiero")) {
     const { playbookFlujoQuiero } = await import("@/lib/flujo/quiero");
     knowledgeBasePrompt += await playbookFlujoQuiero();

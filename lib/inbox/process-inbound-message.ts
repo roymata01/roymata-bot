@@ -5,6 +5,7 @@ import { sendKeywordReplyIfMatch } from "@/lib/inbox/handle-keyword-reply";
 import { handleCampaignReply } from "@/lib/inbox/handle-campaign-reply";
 import { handleCotizacionWhatsApp } from "@/lib/inbox/handle-cotizacion-whatsapp";
 import { handleQuieroDm } from "@/lib/inbox/handle-quiero-dm";
+import { handleDeaDm } from "@/lib/inbox/handle-dea-dm";
 import { manejarRespuestaFlujoQuiero } from "@/lib/inbox/handle-flujo-quiero-respuesta";
 import { checkEscalation } from "@/lib/ai/check-escalation";
 import { royFollowsInstagramUser } from "@/lib/meta/check-roy-follows";
@@ -174,6 +175,10 @@ export async function processInboundMessage(msg: InboundMessage) {
     // la Gen 2 (handleQuiero), que queda fuera del pipeline.
     const quiso = await handleQuieroDm(conversation.id, contact.id, msg.channel, msg.externalId, msg.content);
     if (quiso) return;
+    // "DEA" por mensaje directo (CTA del video de la masterclass) -> entra
+    // al flujo: link de registro de una vez + etiqueta.
+    const deaDm = await handleDeaDm(conversation.id, contact.id, msg.channel, msg.externalId, msg.content);
+    if (deaDm) return;
   }
 
   // Palabra clave ("responde CURSO a esta historia") -> link de registro,

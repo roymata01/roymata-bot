@@ -7,6 +7,8 @@ import { processInboundMessage } from "@/lib/inbox/process-inbound-message";
 import { handleFacebookComment } from "@/lib/inbox/handle-facebook-comment";
 import { handleComentarioQuiero } from "@/lib/inbox/handle-comentario-quiero";
 import { esComentarioQuiero } from "@/lib/flujo/quiero";
+import { handleComentarioDea } from "@/lib/inbox/handle-comentario-dea";
+import { esComentarioDea } from "@/lib/flujo/dea";
 
 // Las respuestas llevan pausas humanas (hasta ~20s entre burbujas), así que se
 // le responde 200 a Meta de inmediato y el trabajo sigue en segundo plano.
@@ -36,8 +38,18 @@ export async function POST(req: NextRequest) {
       for (const comment of comments) {
         // pausa humana antes de la invitación: nadie contesta un comentario en 2s
         await new Promise((r) => setTimeout(r, 8000 + Math.random() * 7000));
-        // "QUIERO" = flujo del Método HÉROE, mismas reglas que Instagram
-        if (esComentarioQuiero(comment.text)) {
+        // "DEA" = registro de la masterclass; "QUIERO" = flujo del Método
+        // HÉROE — mismas reglas que Instagram
+        if (esComentarioDea(comment.text)) {
+          await handleComentarioDea({
+            channel: "messenger",
+            commentId: comment.commentId,
+            mediaId: comment.postId,
+            userId: comment.userId,
+            username: comment.userName,
+            text: comment.text,
+          });
+        } else if (esComentarioQuiero(comment.text)) {
           await handleComentarioQuiero({
             channel: "messenger",
             commentId: comment.commentId,

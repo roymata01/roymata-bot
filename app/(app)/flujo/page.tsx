@@ -1,8 +1,8 @@
 "use client";
 
-// Flujo de venta QUIERO — el diagrama vivo del embudo del Método HÉROE.
+// Flujos del bot — los diagramas vivos de cada embudo (QUIERO y DEA).
 // Roy edita aquí lo que dice el bot en cada paso (lápiz → guardar); la
-// estructura del embudo vive en lib/flujo-quiero.ts.
+// estructura vive en lib/flujo-quiero.ts y lib/flujo-dea.ts.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
@@ -10,11 +10,47 @@ import {
   FLUJO_QUIERO,
   REGLAS_DE_ORO,
   aplicarOverrides,
+  type FaseFlujo,
   type NodoFlujo,
   type OverridesFlujo,
   type RamaFlujo,
 } from "@/lib/flujo-quiero";
+import { FLUJO_DEA, REGLAS_DEA } from "@/lib/flujo-dea";
 import { ChatIcon, PencilIcon, ZapIcon, ShieldIcon, ClockIcon } from "@/components/icons";
+
+type FlujoConfig = {
+  id: string;
+  pestana: string;
+  titulo: string;
+  palabra: string;
+  intro: string;
+  fases: FaseFlujo[];
+  reglas: string[];
+  reglasTitulo: string;
+};
+
+const FLUJOS: FlujoConfig[] = [
+  {
+    id: "quiero",
+    pestana: "QUIERO · Método HÉROE",
+    titulo: "Flujo de venta — QUIERO",
+    palabra: "QUIERO",
+    intro: "Así se comporta el bot con quien comente QUIERO en el video del Método HÉROE.",
+    fases: FLUJO_QUIERO,
+    reglas: REGLAS_DE_ORO,
+    reglasTitulo: "Reglas de oro (aplican en todo el flujo)",
+  },
+  {
+    id: "dea",
+    pestana: "DEA · Masterclass",
+    titulo: "Flujo de registro — DEA",
+    palabra: "DEA",
+    intro: "Así se comporta el bot con quien comente DEA en el video de la masterclass gratis de diciembre (dom 13-dic · 7pm).",
+    fases: FLUJO_DEA,
+    reglas: REGLAS_DEA,
+    reglasTitulo: "Reglas del flujo DEA (además de las reglas de oro)",
+  },
+];
 
 const COLOR_RAMA: Record<RamaFlujo["color"], { chip: string; borde: string }> = {
   verde: { chip: "bg-[#46b380]/12 text-[#2e8a5f] border-[#46b380]/30", borde: "border-t-[#46b380]" },
@@ -127,6 +163,7 @@ function TarjetaNodo({
 
 export default function FlujoPage() {
   const supabase = useMemo(() => createBrowserSupabaseClient(), []);
+  const [flujoId, setFlujoId] = useState<string>("dea");
   const [overrides, setOverrides] = useState<OverridesFlujo>({});
   const [guardados, setGuardados] = useState<OverridesFlujo>({});
   const [editando, setEditando] = useState<string | null>(null);
@@ -134,20 +171,24 @@ export default function FlujoPage() {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const flujo = FLUJOS.find((f) => f.id === flujoId) ?? FLUJOS[0];
+
   const cargar = useCallback(async () => {
-    const { data } = await supabase.from("bot_flujos").select("data").eq("id", "quiero").maybeSingle();
+    setCargando(true);
+    const { data } = await supabase.from("bot_flujos").select("data").eq("id", flujoId).maybeSingle();
     const ov = ((data?.data as OverridesFlujo) ?? {}) as OverridesFlujo;
     setOverrides(ov);
     setGuardados(ov);
+    setEditando(null);
     setCargando(false);
-  }, [supabase]);
+  }, [supabase, flujoId]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial
     cargar();
   }, [cargar]);
 
-  const fases = useMemo(() => aplicarOverrides(FLUJO_QUIERO, overrides), [overrides]);
+  const fases = useMemo(() => aplicarOverrides(flujo.fases, overrides), [flujo, overrides]);
   const hayCambios = JSON.stringify(overrides) !== JSON.stringify(guardados);
 
   function cambiar(id: string, campo: "texto" | "nota", valor: string) {
@@ -159,7 +200,7 @@ export default function FlujoPage() {
     setError(null);
     const { error: err } = await supabase
       .from("bot_flujos")
-      .upsert({ id: "quiero", data: overrides, updated_at: new Date().toISOString() });
+      .upsert({ id: flujoId, data: overrides, updated_at: new Date().toISOString() });
     if (err) {
       setError("No se pudo guardar. Si es la primera vez, falta correr el SQL de bot_flujos en Supabase.");
     } else {
@@ -175,34 +216,46 @@ export default function FlujoPage() {
     setEditando(null);
     const { error: err } = await supabase
       .from("bot_flujos")
-      .upsert({ id: "quiero", data: {}, updated_at: new Date().toISOString() });
+      .upsert({ id: flujoId, data: {}, updated_at: new Date().toISOString() });
     if (!err) setGuardados({});
   }
-
-  if (cargando) return <div className="p-6 text-[13px] text-[var(--text-3)]">Cargando...</div>;
 
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6">
       <div className="mx-auto flex max-w-2xl flex-col gap-5 pb-24">
+        <div className="flex gap-2">
+          {FLUJOS.map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setFlujoId(f.id)}
+              className={`rounded-full border px-3 py-1.5 text-[12px] font-semibold ${
+                f.id === flujoId
+                  ? "border-[#7c3aed] bg-[#7c3aed]/10 text-[#7c3aed]"
+                  : "border-[var(--border-strong)] text-[var(--text-2)] hover:bg-black/5"
+              }`}
+            >
+              {f.pestana}
+            </button>
+          ))}
+        </div>
+
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="page-title">Flujo de venta — QUIERO</h2>
-            <span className="rounded-full border border-[#d97706]/30 bg-[#d97706]/10 px-2 py-0.5 text-[11px] font-medium text-[#b45309]">
-              Borrador · el bot sigue apagado
-            </span>
+            <h2 className="page-title">{flujo.titulo}</h2>
           </div>
           <p className="mt-1 text-[13px] text-[var(--text-2)]">
-            Así se va a comportar el bot con quien comente <strong>QUIERO</strong> en el video. Las burbujas moradas
-            son los mensajes tal cual los mandaría — tócalas con el lápiz para editarlas y guarda. Cuando des el OK,
-            conecto el bot a este flujo.
+            {flujo.intro} Las burbujas moradas son los mensajes tal cual los mandaría — tócalas con el lápiz para
+            editarlas y guarda: lo que editas aquí ES lo que el bot dice.
           </p>
         </div>
+
+        {cargando && <div className="text-[13px] text-[var(--text-3)]">Cargando...</div>}
 
         {error && (
           <div className="rounded-lg border border-[#dc2626]/25 bg-[#dc2626]/5 px-3 py-2 text-[12px] text-[#b91c1c]">{error}</div>
         )}
 
-        {fases.map((fase, fi) => (
+        {!cargando && fases.map((fase, fi) => (
           <section key={fase.id}>
             <div className="mb-2 flex items-baseline gap-2">
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#7c3aed] text-[11px] font-bold text-white">
@@ -263,10 +316,10 @@ export default function FlujoPage() {
         ))}
 
         <section className="card p-4">
-          <h3 className="text-[13px] font-semibold">Reglas de oro (aplican en todo el flujo)</h3>
+          <h3 className="text-[13px] font-semibold">{flujo.reglasTitulo}</h3>
           <p className="mb-2 text-[11px] text-[var(--text-3)]">Estas ya viven en la personalización del bot; aquí nomás se recuerdan.</p>
           <ul className="flex flex-col gap-1">
-            {REGLAS_DE_ORO.map((r) => (
+            {flujo.reglas.map((r) => (
               <li key={r} className="flex items-start gap-1.5 text-[12px] text-[var(--text-2)]">
                 <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-[#7c3aed]" />
                 {r}
