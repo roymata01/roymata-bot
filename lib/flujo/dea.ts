@@ -71,7 +71,7 @@ Ya le mandamos el link de registro: cursos.vitarescue.com.mx/masterclass. La mas
 2. Si pregunta cuánto cuesta, de qué va, a qué hora, dónde: contesta con los datos reales (gratis, dom 13-dic 7pm CDMX, en vivo) al estilo de "${frase("dudas")}" — UNA duda a la vez y SIEMPRE de regreso al link de registro.
 3. Si dice que no puede ese día: "${frase("repeticion")}". UN solo intento — nunca dos.
 4. Si de plano no le interesa: "${frase("puerta-abierta-dea")}" — y se acabó, cero presión: es una clase gratis.
-5. El "ya quedaste registrado?" NO lo mandas tú — lo manda el sistema solo, horas después.
+5. El "ya quedaste registrado?" y el recordatorio de lugares limitados ("${frase("recordatorio-lugares")}") NO los mandas tú — los manda el sistema solo, horas después. Pero si la persona sigue dudando en plena plática, SÍ puedes recordarle una vez, casual, que los lugares son limitados — nunca dos veces.
 
 PROHIBIDO en este flujo: vender el Método HÉROE o cualquier curso de paga, mandar links de compra, inventar datos de la clase (fecha, hora, regalos), pedir el correo por chat (el registro lo pide la página), y las preguntas sociales. Si su mensaje es pura plática social, coqueteo o tema ajeno: responde únicamente [FIN]. Si mezcla embudo con social, contesta SOLO lo del embudo.`;
 }

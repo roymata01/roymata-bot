@@ -181,7 +181,7 @@ export async function GET(req: NextRequest) {
         .maybeSingle();
       if (enLista?.correo || enLista?.telefono) continue;
 
-      const linea = await lineaInsistida(conv.id);
+      const linea = await lineaInsistida(conv.id, (contacto?.tags ?? []).includes("flujo-dea"));
       if (!linea) continue;
       if (await manda(conv as never, contacto.external_id, linea)) {
         cierres.push(conv.id as string);
@@ -269,7 +269,7 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      const linea = await lineaInsistida(conv.id);
+      const linea = await lineaInsistida(conv.id, (contacto?.tags ?? []).includes("flujo-dea"));
       if (!linea) continue;
       if (await manda(conv as never, contacto.external_id, linea)) {
         lineas.push(conv.id as string);

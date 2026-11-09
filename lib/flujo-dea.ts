@@ -133,6 +133,16 @@ export const FLUJO_DEA: FaseFlujo[] = [
         },
       },
       {
+        tipo: "nodo",
+        nodo: {
+          id: "recordatorio-lugares",
+          tipo: "bot",
+          titulo: "Recordatorio de presión: lugares limitados",
+          texto: "oye, nada mas te recuerdo que los lugares son limitados eh jaja ||| registrate antes de que se llene: cursos.vitarescue.com.mx/masterclass",
+          nota: "lo manda el sistema solo, al dia siguiente, SOLO si la persona sigue sin confirmar su registro. una sola vez por persona",
+        },
+      },
+      {
         tipo: "decision",
         id: "d-registro",
         pregunta: "que contesta?",

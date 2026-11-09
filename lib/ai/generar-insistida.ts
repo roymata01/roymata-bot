@@ -89,8 +89,16 @@ export async function capturarNombreDeLaPlatica(
 
 /** La línea que sigue al grito (2 h después, si no contestó). Analiza TODA la
  *  plática: si ya se mandó link de compra y no han comprado → presión de venta
- *  personalizada; si no → retome normal. */
-export async function lineaInsistida(conversationId: string): Promise<string | null> {
+ *  personalizada; si no → retome normal.
+ *  Contactos del FLUJO DEA (masterclass gratis): la línea NO es de venta —
+ *  es el recordatorio de lugares limitados que Roy edita en /flujo
+ *  (nodo "recordatorio-lugares"), determinista. */
+export async function lineaInsistida(conversationId: string, flujoDea = false): Promise<string | null> {
+  if (flujoDea) {
+    const { burbujasDeNodoDea } = await import("@/lib/flujo/dea");
+    const burbujas = await burbujasDeNodoDea("recordatorio-lugares");
+    return burbujas.length ? humanizarTexto(burbujas.join(" ")) : null;
+  }
   const chat = await historiaDe(conversationId);
   if (!chat) return null;
 
