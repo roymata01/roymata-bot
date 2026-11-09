@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { MUNDOS } from "@/lib/mundos";
+import { MUNDOS_CON_PIN } from "@/lib/pin-secciones";
 import { SignOutButton } from "@/components/SignOutButton";
 
 // Launcher: al entrar al sistema, Roy elige a qué mundo se mete.
@@ -50,7 +51,10 @@ export default function HubPage() {
                   {m.nombre[0]}
                 </span>
                 <span className="flex flex-col">
-                  <span className="text-[16px] font-semibold text-[var(--text)]">{m.nombre}</span>
+                  <span className="text-[16px] font-semibold text-[var(--text)]">
+                    {m.nombre}
+                    {MUNDOS_CON_PIN.includes(m.id) && <span className="ml-1.5 text-[13px]" title="Pide PIN">🔒</span>}
+                  </span>
                   <span className="text-[12px] text-[var(--text-3)]">{m.desc}</span>
                 </span>
               </button>
