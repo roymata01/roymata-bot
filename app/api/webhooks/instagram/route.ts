@@ -31,6 +31,13 @@ export async function POST(req: NextRequest) {
   const body = JSON.parse(rawBody);
   const messages = parseMessagingWebhook(body, "instagram");
   const comments = parseInstagramCommentWebhook(body);
+  // Rastro de los eventos que NO son mensajes (p.ej. comentarios): sirve para
+  // diagnosticar campañas de comentario sin adivinar qué mandó Meta.
+  if (comments.length > 0) {
+    console.log(`IG comments: ${comments.length}`, JSON.stringify(comments.map((c) => ({ user: c.username, text: c.text }))));
+  } else if (messages.length === 0) {
+    console.log("IG webhook sin mensajes ni comentarios:", rawBody.slice(0, 800));
+  }
 
   after(async () => {
     try {
