@@ -54,7 +54,7 @@ export async function sendInviteFollowUpIfFirstReply(
   // tiene sentido preguntarle si pudo — se le felicita y se le da certeza.
   const yaRegistrado = await conversacionYaRegistrada(conversationId);
   const segundoMensaje = yaRegistrado
-    ? "Vi que ya te registraste 🙌 revisa tu correo, ahí te llegó la confirmación. Nos vemos el 1 de agosto!"
+    ? "Vi que ya te registraste 🙌 revisa tu correo, ahí te llegó la confirmación. Nos vemos el domingo 13 de diciembre a las 7pm!"
     : PREGUNTA_SEGUIMIENTO;
 
   let burbujas: string[];
@@ -106,7 +106,7 @@ export async function sendInviteFollowUpIfFirstReply(
         channel,
         direction: "out",
         sender_type: "ai",
-        content: "📎 Tarjeta: Clase Gratuita de Control de Hemorragias — Regístrate gratis",
+        content: "📎 Tarjeta: Masterclass SALVA LA NAVIDAD — Regístrate gratis",
         status: "sent",
         meta_message_id: metaMessageId,
       });

@@ -3,7 +3,8 @@
 // tarjeta con imagen + botón. Solo funciona con la ventana de 24h abierta
 // (no en private replies), por eso va en keyword y seguimiento, no en la invitación.
 
-const LINK_REGISTRO = "https://cursos.vitarescue.com.mx/?fb=1";
+// La clase vigente: masterclass SALVA LA NAVIDAD (dom 13-dic-2026, 7pm CDMX).
+const LINK_REGISTRO = "https://cursos.vitarescue.com.mx/masterclass";
 
 export async function sendMessengerLinkCard(recipientId: string): Promise<string> {
   const res = await fetch("https://graph.facebook.com/v21.0/me/messages", {
@@ -21,8 +22,8 @@ export async function sendMessengerLinkCard(recipientId: string): Promise<string
             template_type: "generic",
             elements: [
               {
-                title: "VITA RESCUE — Clase Gratuita: Control de Hemorragias",
-                subtitle: "Sábado 1 de agosto · 6:00 pm CDMX · 100% en vivo",
+                title: "VITA RESCUE — Masterclass gratis: SALVA LA NAVIDAD",
+                subtitle: "Domingo 13 de diciembre · 7:00 pm CDMX · 100% en vivo",
                 image_url: "https://cursos.vitarescue.com.mx/opengraph-image",
                 default_action: {
                   type: "web_url",

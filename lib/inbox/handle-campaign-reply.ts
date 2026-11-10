@@ -8,7 +8,7 @@ import { sendForChannel } from "@/lib/meta/send-message";
 const CONFIRMA = /^\s*(gracias|enterado|enterada|ok|okay|va|listo|perfecto|👍|🙏|de acuerdo)\s*!?\.?\s*$/i;
 
 const SIEMBRA =
-  "¡De nada! 🚑 Nos vemos el 1 de agosto. Oye, al terminar la clase vas a poder obtener tu certificado oficial. Escríbeme a este mismo chat acabando la clase y te paso todos los detalles 👌";
+  "¡De nada! 🚑 Nos vemos el domingo 13 de diciembre. Oye, al terminar la clase vas a poder obtener tu constancia oficial. Escríbeme a este mismo chat acabando la clase y te paso todos los detalles 👌";
 
 // Devuelve true si manejó el mensaje (y ya no debe pasar al bot normal).
 export async function handleCampaignReply(
