@@ -26,9 +26,9 @@ export const FLUJO_DEA: FaseFlujo[] = [
         nodo: {
           id: "comentario",
           tipo: "disparador",
-          titulo: "Comentan DEA en el video",
+          titulo: "Comentan DEA o CURSO en el video",
           texto:
-            "el bot detecta la palabra dea en los comentarios del video (mayusculas o minusculas, da igual) y le manda el registro por mensaje directo",
+            "el bot detecta la palabra dea o curso en los comentarios del video (mayusculas o minusculas, da igual) y le manda el registro por mensaje directo. curso tambien funciona por dm o respondiendo una historia",
           nota: "funciona en instagram y facebook. en tiktok no se puede automatizar (tiktok no deja mandar dms por api) — ahi el video debe decir 'link en mi perfil'",
         },
       },

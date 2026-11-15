@@ -42,11 +42,13 @@ function normalizar(texto: string): string {
     .trim();
 }
 
-/** El comentario de la campaña: "DEA" (con emojis/signos de más, da igual). */
+/** El comentario de la campaña: "DEA" o "CURSO" (con emojis/signos de más, da
+ * igual). "CURSO" se sumó el 14-nov (pedido de Roy): también invita a la
+ * masterclass del 13 de diciembre. */
 export function esComentarioDea(texto: string | null): boolean {
   if (!texto || texto.length > 40) return false;
   const t = normalizar(texto);
-  return /\bdea\b/.test(t);
+  return /\b(dea|cursos?)\b/.test(t);
 }
 
 /** Burbujas de un nodo del flujo DEA (separadas por |||), ya personalizadas. */

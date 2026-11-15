@@ -3,11 +3,13 @@ import { sendForChannel } from "@/lib/meta/send-message";
 import { burbujasDeNodoDea, TAG_FLUJO_DEA } from "@/lib/flujo/dea";
 import type { Channel } from "@/types/database";
 
-// "DEA" mandado por MENSAJE directo (no comentario): el CTA del video hace
-// que mucha gente escriba la palabra al DM en vez de comentar. Mismas
-// reglas que el flujo de comentarios: se le manda el link de registro de
-// una vez (ya lo pidió) y queda etiquetado en el flujo DEA.
-const PATRON_DEA_DM = /^\W{0,6}dea\W{0,8}$/i;
+// "DEA" o "CURSO" mandado por MENSAJE directo (no comentario): el CTA del
+// video hace que mucha gente escriba la palabra al DM en vez de comentar.
+// Mismas reglas que el flujo de comentarios: se le manda el link de registro
+// de una vez (ya lo pidió) y queda etiquetado en el flujo DEA. "CURSO" entró
+// el 14-nov (pedido de Roy): sustituye a la respuesta de palabra clave vieja
+// que mandaba el link del Método HÉROE.
+const PATRON_DEA_DM = /^\W{0,6}(dea|cursos?)\W{0,8}$/i;
 
 export async function handleDeaDm(
   conversationId: string,
