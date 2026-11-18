@@ -34,7 +34,10 @@ function PantallaPin() {
         setCargando(false);
         return;
       }
-      router.replace(next);
+      // Navegación COMPLETA, no la del router: el router guarda en memoria que
+      // esta sección redirigía a /pin y volvía a traer esta misma pantalla,
+      // que se quedaba en "Verificando…" aunque el PIN ya estaba aceptado.
+      window.location.assign(next);
     } catch {
       setError("Algo falló, intenta de nuevo");
       setCargando(false);
