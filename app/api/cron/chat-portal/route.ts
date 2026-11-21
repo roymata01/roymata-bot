@@ -15,6 +15,7 @@ export const maxDuration = 60;
 // principal declina por seguridad, el respaldo contesta en la misma llamada.
 
 const MODELO = process.env.CHAT_PORTAL_MODEL || "claude-opus-5-5";
+const ESFUERZOS = ["low", "medium", "high"];
 
 export async function POST(req: NextRequest) {
   const auth = req.headers.get("authorization");
@@ -42,8 +43,9 @@ export async function POST(req: NextRequest) {
       ],
       messages: body.messages as Anthropic.Beta.BetaMessageParam[],
       tools: (Array.isArray(body.tools) ? body.tools : []) as Anthropic.Beta.BetaToolUnion[],
-      // Chat en vivo: respuestas rápidas y cortas.
-      output_config: { effort: "low" },
+      // Chat en vivo: rápido por defecto. El portal pide más cuidado ("high")
+      // cuando la respuesta sale de un manual de primeros auxilios.
+      output_config: { effort: ESFUERZOS.includes(body.esfuerzo) ? body.esfuerzo : "low" },
       ...(usaRespaldo
         ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: [{ model: "claude-opus-4-8" }] }
         : {}),
