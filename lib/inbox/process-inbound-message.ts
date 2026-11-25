@@ -6,6 +6,7 @@ import { handleCampaignReply } from "@/lib/inbox/handle-campaign-reply";
 import { handleCotizacionWhatsApp } from "@/lib/inbox/handle-cotizacion-whatsapp";
 import { handleQuieroDm } from "@/lib/inbox/handle-quiero-dm";
 import { handleDeaDm } from "@/lib/inbox/handle-dea-dm";
+import { handleConferenciaDm, avisarDatosConferencia, TAG_CONFERENCIA_PENDIENTE } from "@/lib/inbox/handle-conferencia-dm";
 import { manejarRespuestaFlujoQuiero } from "@/lib/inbox/handle-flujo-quiero-respuesta";
 import { checkEscalation } from "@/lib/ai/check-escalation";
 import { royFollowsInstagramUser } from "@/lib/meta/check-roy-follows";
@@ -46,6 +47,20 @@ export async function processInboundMessage(msg: InboundMessage) {
       });
       return;
     }
+  }
+
+  // CONFERENCIA (24-nov): la escuela ya recibió la respuesta automática y
+  // ahora contesta (normalmente con sus datos) -> alerta a Roy con lo
+  // que escribió (solo si ya trae datos). Va ANTES del candado de ai_enabled: ese chat quedó con la
+  // IA apagada a propósito y aun así Roy tiene que enterarse.
+  if ((contact.tags ?? []).includes(TAG_CONFERENCIA_PENDIENTE)) {
+    await avisarDatosConferencia({
+      conversationId: conversation.id,
+      contactId: contact.id,
+      channel: msg.channel,
+      messageCreatedAt: message.created_at as string,
+    });
+    return;
   }
 
   if (conversation.status !== "con_ia" || !conversation.ai_enabled) return;
@@ -155,6 +170,12 @@ export async function processInboundMessage(msg: InboundMessage) {
     conversation.id, contact.id, msg.channel, msg.externalId, msg.content
   );
   if (cotizacionEnviada) return;
+
+  // "CONFERENCIA" por mensaje directo (reel "Contrata a Roy Mata", 24-nov):
+  // respuesta fija aprobada por Roy + alerta a su WhatsApp + chat "Por
+  // atender" sin IA. Va antes de los flujos QUIERO/DEA: aplica a cualquiera.
+  const conferencia = await handleConferenciaDm(conversation.id, contact.id, msg.channel, msg.externalId, msg.content);
+  if (conferencia) return;
 
   // FLUJO QUIERO del Método HÉROE (14-oct): quien entró por el comentario
   // QUIERO trae la etiqueta del flujo — su "si" corto al ofrecimiento manda
