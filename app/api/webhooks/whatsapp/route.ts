@@ -1,10 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { handleWebhookVerification } from "@/lib/meta/verify-webhook";
 import { isValidMetaSignature } from "@/lib/meta/verify-signature";
 import { parseWhatsAppPayload } from "@/lib/meta/parse-whatsapp";
 import { processInboundMessage } from "@/lib/inbox/process-inbound-message";
 import { normalizaTelMx } from "@/lib/meta/send-whatsapp-template";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { esRoy } from "@/lib/publicador/whatsapp-roy";
+import { ingestInboundMessage } from "@/lib/inbox/ingest-inbound-message";
+
+// El publicador (video → copys → "publicar") corre después de contestarle a
+// Meta y puede tardar varios minutos subiendo a las redes.
+export const maxDuration = 800;
 
 export function GET(req: NextRequest) {
   return handleWebhookVerification(req);
@@ -51,6 +57,25 @@ export async function POST(req: NextRequest) {
 
   try {
     for (const message of messages) {
+      // PUBLICADOR (27-nov-2026): lo que Roy le manda al bot desde SU número
+      // (videos, "publicar", cambios a los copys) se atiende aparte y en
+      // segundo plano. Primero se guarda el mensaje (eso deduplica los
+      // reintentos de Meta); si no era para el publicador, sigue normal.
+      if (esRoy(message.externalId)) {
+        const ingerido = await ingestInboundMessage(message);
+        if (!ingerido) continue; // reintento de Meta: ya se atendió
+        after(async () => {
+          try {
+            const { manejarMensajeRoy } = await import("@/lib/publicador/flujo");
+            const atendido = await manejarMensajeRoy(message);
+            // no era para el publicador: sigue el camino normal de la bandeja
+            if (!atendido) await processInboundMessage(message, ingerido);
+          } catch (e) {
+            console.error("Publicador (mensaje de Roy):", e);
+          }
+        });
+        continue;
+      }
       // opt-out: si el mensaje es "BAJA", se registra y no pasa al bot
       if (PALABRAS_BAJA.test(message.content ?? "")) {
         const tel = normalizaTelMx(message.externalId);

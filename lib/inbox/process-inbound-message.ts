@@ -24,8 +24,12 @@ import { runWorkflows } from "@/lib/workflows/run-workflows";
 import { paramedicoCobertura, manejarRespuestaCobertura } from "@/lib/inbox/handle-cobertura";
 import type { InboundMessage } from "@/lib/meta/types";
 
-export async function processInboundMessage(msg: InboundMessage) {
-  const ingested = await ingestInboundMessage(msg);
+export async function processInboundMessage(
+  msg: InboundMessage,
+  // el webhook de WhatsApp ya lo guardó (mensajes de Roy que no eran para el publicador)
+  yaIngerido?: Awaited<ReturnType<typeof ingestInboundMessage>>
+) {
+  const ingested = yaIngerido ?? (await ingestInboundMessage(msg));
   if (!ingested) return; // evento duplicado, ya procesado antes
 
   // Eco: mensaje que Roy mandó desde su app de IG/Messenger — solo se guarda para
