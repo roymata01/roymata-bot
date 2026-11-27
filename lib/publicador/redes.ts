@@ -207,76 +207,100 @@ export async function publicarYouTube(video: Buffer, copy: CopyYouTube): Promise
   return link;
 }
 
-// ---------------- TikTok (Direct Post) ----------------
-// Solo se usa cuando TikTok apruebe la app (TIKTOK_DIRECT_POST=1 en Vercel y la
-// cuenta reconectada con el permiso video.publish). Mientras tanto, la app sin
-// auditar solo puede publicar en privado, y Roy no quiere eso: TikTok se sube
-// desde la Mac (skill publicar, TikTok Studio en Chrome).
+// ---------------- TikTok ----------------
+// TikTok no aprueba Direct Post para apps de uso personal ("a utility tool to
+// help upload contents to the account(s) you or your team manages"), así que
+// el bot usa el modo BORRADOR (Upload / video.upload) de la app VITA - ROY: el
+// video llega a la bandeja de TikTok de Roy, él pega el copy y publica desde la
+// app. Decisión de Roy, 27-nov-2026. Direct Post queda escrito por si algún
+// día se aprueba (TIKTOK_DIRECT_POST=1).
 export const tiktokDirecto = () => process.env.TIKTOK_DIRECT_POST === "1";
 
-export async function publicarTikTok(video: Buffer, copy: string): Promise<string> {
-  const token = await accessTokenTikTok();
-  if (!token) throw new Falla("TikTok no está conectado");
-  const auth = { Authorization: `Bearer ${token.access_token}`, "Content-Type": "application/json; charset=UTF-8" };
+type TokenTk = NonNullable<Awaited<ReturnType<typeof accessTokenTikTok>>>;
+const authTk = (t: TokenTk) => ({
+  Authorization: `Bearer ${t.access_token}`,
+  "Content-Type": "application/json; charset=UTF-8",
+});
 
-  const creador = await fetch(`${TIKTOK_API}/post/publish/creator_info/query/`, { method: "POST", headers: auth }).then((r) =>
-    r.json()
-  );
-  if (creador?.error?.code !== "ok") throw new Falla(`TikTok: ${creador?.error?.message ?? "creator_info falló"}`);
-  const opciones: string[] = creador.data?.privacy_level_options ?? [];
-  const privacidad = opciones.includes("PUBLIC_TO_EVERYONE") ? "PUBLIC_TO_EVERYONE" : opciones[0];
-  if (privacidad !== "PUBLIC_TO_EVERYONE")
-    throw new Falla("TikTok todavía no deja publicar en público desde la app (falta la aprobación)");
-
-  // Trozos de 5–64 MB; el último absorbe el sobrante (hasta 128 MB).
-  const CH = 32 * 1024 * 1024;
-  const chunk = video.length <= 64 * 1024 * 1024 ? video.length : CH;
+/** init + subida en trozos (5–64 MB; el último absorbe el sobrante). Regresa publish_id. */
+async function subirATikTok(t: TokenTk, endpoint: string, video: Buffer, extra: Record<string, unknown>) {
+  const chunk = video.length <= 64 * 1024 * 1024 ? video.length : 32 * 1024 * 1024;
   const total = Math.max(1, Math.floor(video.length / chunk));
-
-  const init = await fetch(`${TIKTOK_API}/post/publish/video/init/`, {
+  const init = await fetch(`${TIKTOK_API}${endpoint}`, {
     method: "POST",
-    headers: auth,
+    headers: authTk(t),
     body: JSON.stringify({
-      post_info: {
-        title: copy.slice(0, 2200),
-        privacy_level: privacidad,
-        disable_comment: false,
-        disable_duet: false,
-        disable_stitch: false,
-        video_cover_timestamp_ms: 1000,
-      },
+      ...extra,
       source_info: { source: "FILE_UPLOAD", video_size: video.length, chunk_size: chunk, total_chunk_count: total },
     }),
   }).then((r) => r.json());
-  if (init?.error?.code !== "ok") throw new Falla(`TikTok: ${init?.error?.message ?? "init falló"}`);
+  if (init?.error?.code !== "ok") throw new Falla(`TikTok: ${init?.error?.message || init?.error?.code || "init falló"}`);
 
   for (let i = 0; i < total; i++) {
     const ini = i * chunk;
     const fin = i === total - 1 ? video.length : ini + chunk;
     const r = await fetch(init.data.upload_url, {
       method: "PUT",
-      headers: {
-        "Content-Type": "video/mp4",
-        "Content-Range": `bytes ${ini}-${fin - 1}/${video.length}`,
-      },
+      headers: { "Content-Type": "video/mp4", "Content-Range": `bytes ${ini}-${fin - 1}/${video.length}` },
       body: vista(video.subarray(ini, fin)),
     });
     if (!r.ok) throw new Falla(`TikTok: falló la subida (${r.status})`);
   }
+  return init.data.publish_id as string;
+}
 
+async function estadoTikTok(t: TokenTk, publishId: string) {
+  const st = await fetch(`${TIKTOK_API}/post/publish/status/fetch/`, {
+    method: "POST",
+    headers: authTk(t),
+    body: JSON.stringify({ publish_id: publishId }),
+  }).then((r) => r.json());
+  return st?.data as { status?: string; fail_reason?: string; publicaly_available_post_id?: string[] } | undefined;
+}
+
+/** Manda el video a la bandeja de borradores de TikTok de Roy. */
+export async function mandarTikTokBorrador(video: Buffer): Promise<string> {
+  const t = await accessTokenTikTok();
+  if (!t) throw new Falla("TikTok no está conectado (reconectar en sistema.vitarescue.com.mx/tiktok)");
+  const publishId = await subirATikTok(t, "/post/publish/inbox/video/init/", video, {});
+  for (let i = 0; i < 36; i++) {
+    await espera(5000);
+    const s = await estadoTikTok(t, publishId);
+    if (s?.status === "SEND_TO_USER_INBOX" || s?.status === "PUBLISH_COMPLETE") return "en tu bandeja de TikTok";
+    if (s?.status === "FAILED") throw new Falla(`TikTok no lo aceptó: ${s.fail_reason}`);
+  }
+  return "subido; TikTok lo sigue procesando, en unos minutos llega a tu bandeja";
+}
+
+export async function publicarTikTok(video: Buffer, copy: string): Promise<string> {
+  const t = await accessTokenTikTok();
+  if (!t) throw new Falla("TikTok no está conectado");
+  const creador = await fetch(`${TIKTOK_API}/post/publish/creator_info/query/`, { method: "POST", headers: authTk(t) }).then(
+    (r) => r.json()
+  );
+  if (creador?.error?.code !== "ok") throw new Falla(`TikTok: ${creador?.error?.message ?? "creator_info falló"}`);
+  const opciones: string[] = creador.data?.privacy_level_options ?? [];
+  if (!opciones.includes("PUBLIC_TO_EVERYONE"))
+    throw new Falla("TikTok todavía no deja publicar en público desde la app (falta la aprobación)");
+
+  const publishId = await subirATikTok(t, "/post/publish/video/init/", video, {
+    post_info: {
+      title: copy.slice(0, 2200),
+      privacy_level: "PUBLIC_TO_EVERYONE",
+      disable_comment: false,
+      disable_duet: false,
+      disable_stitch: false,
+      video_cover_timestamp_ms: 1000,
+    },
+  });
   for (let i = 0; i < 60; i++) {
     await espera(5000);
-    const st = await fetch(`${TIKTOK_API}/post/publish/status/fetch/`, {
-      method: "POST",
-      headers: auth,
-      body: JSON.stringify({ publish_id: init.data.publish_id }),
-    }).then((r) => r.json());
-    const s = st?.data?.status;
-    if (s === "PUBLISH_COMPLETE") {
-      const idPost = st.data.publicaly_available_post_id?.[0];
+    const s = await estadoTikTok(t, publishId);
+    if (s?.status === "PUBLISH_COMPLETE") {
+      const idPost = s.publicaly_available_post_id?.[0];
       return idPost ? `https://www.tiktok.com/@roymata01/video/${idPost}` : "publicado (TikTok aún no da el link)";
     }
-    if (s === "FAILED") throw new Falla(`TikTok no lo pudo publicar: ${st.data.fail_reason}`);
+    if (s?.status === "FAILED") throw new Falla(`TikTok no lo pudo publicar: ${s.fail_reason}`);
   }
   return "subido; TikTok lo sigue procesando";
 }

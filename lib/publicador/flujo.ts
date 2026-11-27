@@ -8,6 +8,7 @@ import {
   publicarFacebook,
   publicarInstagram,
   publicarTikTok,
+  mandarTikTokBorrador,
   publicarYouTube,
   tiktokDirecto,
   type Copys,
@@ -52,7 +53,7 @@ export type Publicacion = {
   resultados: Record<string, Resultado>;
   archivo_borrado_at: string | null;
 };
-type Resultado = { ok: boolean; link?: string; error?: string; pendiente?: "mac"; at?: string };
+type Resultado = { ok: boolean; link?: string; error?: string; pendiente?: "mac"; borrador?: boolean; at?: string };
 
 const db = () => createAdminClient().from("publicaciones");
 
@@ -96,7 +97,7 @@ function textoCopys(p: Publicacion): string {
     );
   if (c.tiktok)
     partes.push(
-      `🎵 *TIKTOK*${tiktokDirecto() ? "" : " (este lo subo desde la Mac mientras TikTok aprueba la app)"}\n${c.tiktok}`
+      `🎵 *TIKTOK*${tiktokDirecto() ? "" : " (te llega como borrador a tu TikTok: solo pegas el copy y publicas)"}\n${c.tiktok}`
     );
   partes.push(
     "Contesta *publicar* y lo subo a todas.\nSi quieres cambiar algo, dime qué y lo corrijo.\nTambién puedes decir *publicar solo en instagram y youtube*, *publicar sin tiktok* o *cancelar*."
@@ -256,7 +257,25 @@ async function publicar(p: Publicacion, redes: Red[]) {
     if (redes.includes("youtube") && copy.youtube) correr("youtube", () => publicarYouTube(video, copy.youtube!));
     if (redes.includes("tiktok") && copy.tiktok) {
       if (tiktokDirecto()) correr("tiktok", () => publicarTikTok(video, copy.tiktok!));
-      else resultados.tiktok = { ok: false, pendiente: "mac", at: new Date().toISOString() };
+      else {
+        // borrador en la bandeja de TikTok; si falla, queda pendiente para la Mac
+        tareas.push(
+          mandarTikTokBorrador(video)
+            .then((link) => {
+              resultados.tiktok = { ok: true, link, borrador: true, at: new Date().toISOString() };
+            })
+            .catch((e) => {
+              console.error("tiktok borrador:", e);
+              resultados.tiktok = {
+                ok: false,
+                pendiente: "mac",
+                error: String(e instanceof Error ? e.message : e).slice(0, 300),
+                at: new Date().toISOString(),
+              };
+            })
+            .then(guardar)
+        );
+      }
     }
     await Promise.all(tareas);
   } catch (e) {
@@ -275,18 +294,26 @@ async function publicar(p: Publicacion, redes: Red[]) {
 
   const lineas: string[] = [];
   if (ok.length) lineas.push("✅ *Publicado*");
-  for (const r of ok) lineas.push(`${NOMBRES[r]}: ${resultados[r].link}`);
+  for (const r of ok.filter((x) => !resultados[x].borrador)) lineas.push(`${NOMBRES[r]}: ${resultados[r].link}`);
   if (fallaron.length) {
     lineas.push("", "❌ *No se pudo*");
     for (const r of fallaron) lineas.push(`${NOMBRES[r]}: ${resultados[r].error}`);
     lineas.push("", "Contesta *publicar* otra vez para reintentar solo las que fallaron.");
   }
+  const tiktokBorrador = redes.includes("tiktok") && resultados.tiktok?.ok && resultados.tiktok.borrador;
+  if (tiktokBorrador)
+    lineas.push(
+      "",
+      "🎵 *TikTok*: ya está en tu bandeja de TikTok. Abre TikTok, toca la notificación, pega el copy que te mando abajo y dale Publicar."
+    );
   if (tiktokMac)
     lineas.push(
       "",
-      "🎵 TikTok: queda pendiente para la Mac (TikTok todavía no aprueba la app). Cuando abras Claude en la Mac dile *publicar pendientes de TikTok* y lo subo."
+      `🎵 TikTok: no pude mandarlo a tu bandeja (${resultados.tiktok?.error ?? "error"}). Queda pendiente para la Mac: cuando abras Claude dile *publicar pendientes de TikTok*.`
     );
   await textoARoy(lineas.join("\n").trim());
+  // el copy de TikTok solo, para copiarlo y pegarlo fácil
+  if (tiktokBorrador && copy.tiktok) await textoARoy(copy.tiktok);
 
   // El video ya no hace falta (salvo que TikTok lo espere en la Mac o haya que reintentar)
   if (!fallaron.length && !tiktokMac) await borrarVideo(p.id, p.partes ?? 1).catch((e) => console.error("borrarVideo:", e));
